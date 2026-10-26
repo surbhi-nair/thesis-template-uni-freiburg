@@ -1,0 +1,246 @@
+\section{Approach}\label{sec:approach}
+
+In Section~\ref{sec:problem-statement}, we defined our task: given the generic KG \(G_D\) of a structured dataset \(D\), find a set of CONSTRUCT queries \(Q\) such that \(Q(G_D)\) is a semantic KG of \(D\). This chapter describes how we propose to implement this task. 
+
+Our approach follows the idea of GRASP (Section~\ref{sec:bg-grasp}): instead of giving an LLM a description of the data, we let an LLM agent explore the data itself, and write its result as SPARQL queries. The difference to the original use of GRASP is the kind of query. The agent does not write a SELECT query that answers a question, but CONSTRUCT queries that remodel an entire KG\@.
+
+Figure~\ref{fig:approach-pipeline} gives an overview. The approach consists of four steps, each described in its own section:
+\begin{enumerate}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Convert} \(D\) into a generic KG \(G_D\) with a direct mapping (Section~\ref{sec:approach-generic}).
+  \item \textbf{Prepare} \(G_D\) for exploration by building the notes, search indices, and shapes of GRASP (Section~\ref{sec:approach-setup}).
+  \item \textbf{Generate} the CONSTRUCT queries with a generation agent, and check them with an independent review agent (Section~\ref{sec:approach-construct}).
+  \item \textbf{Materialize} the semantic KG by executing the queries on \(G_D\). 
+  % (Section~\ref{sec:approach-materialize}).
+\end{enumerate}
+Finally, Section~\ref{sec:approach-baseline} describes the baseline against which we compare our approach.
+
+\begin{figure}[!htbp]
+  \centering
+  \includestandalone[width=\textwidth]{assets/approach_pipeline}
+  \caption{Overview of generic-to-semantic KG pipeline}
+  % Overview of our approach. The dashed arrow indicates that both agents explore the generic KG \(G_D\) while they generate and review the queries.
+  \label{fig:approach-pipeline}
+\end{figure}
+
+%-----------------------------------------------------------------------
+\subsection{Structured Data to Generic KG}\label{sec:approach-generic}
+Our task, as defined in Section~\ref{sec:problem-statement}, starts from an RDF KG that is to be modeled semantically, regardless of the format in which the data was originally stored. The first step therefore, is to convert the source data \(D\) into a generic KG \(G_D\).  Converting every source into a generic KG first keeps the rest of the pipeline independent of the source format: the agent explores the data with SPARQL, and writes its result as SPARQL CONSTRUCT queries over the same graph. 
+%SPARQL Anything \citep{asprino2023facade} follows a similar idea, with a generic RDF view of heterogeneous formats, but there the CONSTRUCT queries are written by hand.
+
+
+% The generic KG must not make any modeling decisions itself, since these are exactly what the agent is supposed to make. At the same time, it must preserve all information of \(D\), since the agent can only model what it can see. Our conversion is therefore guided by three principles:
+% \begin{itemize}[leftmargin=*, itemsep=2pt]
+%   \item \textbf{Faithful:} every non-empty value of \(D\) appears in \(G_D\), and nothing appears in \(G_D\) that is not in \(D\).
+%   \item \textbf{Navigable:} where the schema declares references between tables, \(G_D\) contains edges between the corresponding rows, so the agent can follow them without reconstructing them from values.
+%   \item \textbf{Uniform:} the same logical row yields the same triples, regardless of its source format.
+% \end{itemize}
+
+\paragraph{Mapping:}
+In this thesis, we only consider relational data for which we refer the W3C Direct Mapping \citep{w3c2012directmapping} to generate the generic KG\@. 
+\begin{itemize}
+  \item The row becomes a node whose IRI consists of a base IRI, the table name, and the value of the primary key. If the primary key is missing, the row is identified by its position, as \texttt{\_row}\(N\). A composite primary key is written as \texttt{column=value} pairs joined with \texttt{;}. 
+  \item The row receives an \texttt{rdf:type} triple with a class named after its table.
+  \item Every non-null cell yields a triple with a predicate named after the table and the column. 
+  \item Where the source declares column types, we follow R2RML \citep{das2012r2rml}: integer types map to \texttt{xsd:integer}, \texttt{NUMERIC} and \texttt{DECIMAL} to \texttt{xsd:decimal}, floating-point types to \texttt{xsd:double}, and boolean, date, and timestamp types to \texttt{xsd:boolean}, \texttt{xsd:date}, and \texttt{xsd:dateTime}. A value receives a datatype only if it also matches that datatype's lexical form; otherwise, and for all other cases, it is written as a plain string.
+  \item For a declared foreign key, the row receives an edge to the referenced row and optionally may also emit a triple with the foreign key value as a literal. For composite primary keys, the foreign key value is emitted accordingly to that single node. 
+\end{itemize}
+If a schema is known, the converter additionally emits, once per table, a class declaration and the \texttt{rdfs:domain} and \texttt{rdfs:range} of each predicate.
+
+Table~\ref{tab:mapping-rules} summarizes the mapping rules and gives examples.  
+\begin{table}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabular}{p{2.6cm} p{6.1cm} p{4.6cm}}
+    \hline
+    \textbf{Source} & \textbf{Generic KG} & \textbf{Example} \\
+    \hline
+    Row & \texttt{<…/row/\{table\}/\{key\}>} & \texttt{<row/title/tt0113277>} \\
+    Table & \texttt{rdf:type <…/table/\{table\}>} & \texttt{<table/title>} \\
+    Cell & \texttt{<…/\{table\}/\{column\}>} & \texttt{<title/primaryTitle> "Heat"} \\
+    Foreign key & \texttt{<…/ref/\{table\}/\{column\}>} & \texttt{<ref/principals/nconst>} \\
+    Typed column & XSD datatype, if the declared type maps to one and the value is valid & \texttt{"1995"\^{}\^{}xsd:integer} \\
+    % Schema & Class declaration and \texttt{rdfs:domain}/\texttt{rdfs:range} per table, if a schema is known & \texttt{rdfs:range xsd:integer} \\
+    \hline
+  \end{tabular}
+  \caption{Rules of the direct mapping}
+  \label{tab:mapping-rules}
+\end{table}
+
+
+\paragraph{Conversion Practices:}Real-world databases deviate from the idealized picture of the Direct Mapping in several ways. The converter therefore applies the following practices to all datasets:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Sanitizing special characters:} Table names, column names, and key values become parts of IRIs, but may contain characters that IRIs do not allow. Every character outside the unreserved set of RFC~3986 (ASCII letters, digits, and \texttt{-~.~\_~\textasciitilde}) is percent-encoded as its UTF-8 bytes. 
+  % \[
+  % \text{column} \texttt{Percent (\%) Eligible Free (K-12)} \xrightarrow{\text{}} \texttt{Percent\%20\%28\%25\%29\allowbreak\%20Eligible\%20Free\%20\allowbreak\%28K-12\%29}
+  % \]
+  \[
+  \texttt{image/jpeg}, \text{ a primary key} \xrightarrow{\text{percent-encode}} \text{row IRI } \texttt{<row/image\_type/image\%2Fjpeg>}
+  \]
+ \item \textbf{Null handling:} Values are trimmed of leading and trailing whitespace, and a cell yields no triple if it is then NULL or empty. By default, the converter treats only real NULL values and empty strings as missing. In addition, it accepts an optional list of null markers, that is, strings that stand for a missing value in a particular dataset. Text files such as CSV or TSV files, for example, cannot represent NULL, and therefore often write missing values as \texttt{\textbackslash N}. Values that only mean ``unknown'' within the domain, such as \texttt{-} or \texttt{N/A}, are not interpreted and remain ordinary values, since deciding their meaning is a modeling decision left to the agent unless the dataset owner explicitly declares them as null markers.
+
+  \item \textbf{Multi-valued cells:} Delimited files often contain cells with multiple values either separated by a delimiter or in an array, for instance, a list of genres \texttt{Action,Crime,Drama}. Besides the field delimiter of a file, the converters therefore accept an optional sub-delimiter, together with the columns it applies to, or all columns if none are given. A cell in such a column is split into one literal per value. 
+  % Foreign-key columns are never split, since their value must identify a single row. Columns that list identifiers of other rows are split like any other column, but are not linked to the rows they name.
+
+  \item \textbf{Sampling:} An agent does not need to see every row of a table to understand its structure, and a large KG slows down exploration. The converters can therefore optionally produce a sample of the data instead of converting it in full. 
+  
+  Sampling is controlled by three parameters: a size threshold, a sample size, and a limit for foreign-key repair. Tables below the threshold (by default 5{,}000 rows) are always converted completely. From larger tables, a fixed number of rows (by default 2{,}000) is drawn uniformly at random using reservoir sampling \citep{vitter1985random}. 
+
+  For datasets where schema is available, sampling the tables independently, breaks references: a sampled row may refer to a row in another table that was not part of that table's sample. To fix this, we apply \emph{foreign-key repair}. While sampling, the converter records every value that a foreign key refers to. It then adds the rows that hold these values to their tables. Each row is looked up by the column that the foreign key names(which may not always be the primary key). References from completely converted tables are also recorded, because they can point into sampled tables as well. 
+  
+  To keep the sample small, repair is limited in two ways. First, it goes only one level deep, so the references of the added rows are not followed. Second, it adds at most a fixed number of distinct values per referenced column (by default 1200). References beyond these limits remain dangling in the sampled KG.
+
+
+  Reservoir sampling reads the table in a single pass and needs memory proportional to the sample size, not to the size of the table. If a random seed is given, the sample is reproducible.Moreover, sampling does not limit the result. A CONSTRUCT query set generated on a sample can be executed on the generic KG of the complete data.
+\end{itemize}
+Beyond these general practices, some datasets required specific handling. We describe these cases together with the datasets in Section~\ref{sec:datasets}.
+
+%-----------------------------------------------------------------------
+\clearpage
+
+\subsection{Preparing the Generic KG}\label{sec:approach-setup}
+
+A generic KG of a database with hundreds of tables is too large to understand by browsing its triples. Before the agent starts, we therefore let GRASP build the components described in Section~\ref{sec:bg-grasp}. We load \(G_D\) into a QLever instance \citep{bast2017qlever}, which serves as the SPARQL endpoint for all further steps, and run the setup of GRASP once per dataset, as per the following:
+\begin{enumerate}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Info.} The setup task determines the prefixes of \(G_D\) and writes a short description of the input KG.
+  \item \textbf{Structural notes.} Over three rounds, the agent repeatedly picks a class or property in a part of \(G_D\) that is not yet well covered, explores its connections, and records notes on the structure and content of \(G_D\), such as those in Figure~\ref{fig:grasp-notes}.
+  \item \textbf{Search indices.} The setup task writes the SPARQL queries that select the entities, properties, and literals of \(G_D\). GRASP executes them and builds the three search indices.
+  % \item \textbf{Functional notes.} Over another three rounds, an agent tries out the exploration tools on \(G_D\), now including the search tools, and records general notes on how they behave, when they are useful, and where they fail.
+  \item \textbf{Shapes.} Given the structural notes and search indices, the setup task determines how \(G_D\) assigns classes to instances and declares its schema. GRASP then discovers the classes, profiles their instances, and builds the shape index, with shapes such as the one in Figure~\ref{fig:grasp-shape}. Since every row of the generic KG is typed with the class of its table, the setup reliably finds the class of every row, and each shape summarizes one table. 
+\end{enumerate}
+% The notes, indices, and shapes are available to both agents of the next step.
+
+%-----------------------------------------------------------------------
+
+\subsection{Generating CONSTRUCT Queries}\label{sec:approach-construct}
+
+The core of our approach is the generation of the CONSTRUCT queries. The manual process it replaces consists of understanding the data, designing a model, and writing and checking the mapping. We divide this work between two agents, both implemented as tasks of GRASP and equipped with its exploration tools: 
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item a \emph{generation agent} (\texttt{construct-gen}), which explores \(G_D\), designs the model, and writes the queries, 
+  \item and an independent \emph{review agent} (\texttt{construct-review}), which checks the result against the data.
+\end{itemize}
+
+Figure~\ref{fig:approach-review} shows how the two agents interact. The generation agent writes and tests queries until it is satisfied, and then submits them as a set. Every accepted submission is checked by the review agent, which returns a verdict together with feedback. Unless the verdict states that the queries are done, the generation agent revises them and submits again, up to a configured maximum number of review rounds. 
+
+\begin{figure}[!htbp]
+  \centering
+  \includestandalone[width=\textwidth]{assets/approach_review}
+  \caption{Generation and review of CONSTRUCT queries.}
+  \label{fig:approach-review}
+\end{figure}
+
+In the following, we first describe the generation agent and how it manages its queries, and then the review agent and the loop between the two.
+
+\paragraph{Generation agent:}
+The prompt of the generation agent describes the task: analyze the input generic KG, \(G_D\) and produce CONSTRUCT queries that model it as a well-formed, semantically correct KG\@. Since \(G_D\) may already model some of its data well, the agent should keep or refine such parts, and remodel the rest. The prompt asks the agent to proceed in the following steps, which mirror the manual process:
+\begin{enumerate}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Explore} \(G_D\), starting from the notes and shapes, and run targeted queries, if necessary, to fill gaps in its understanding of the source data.
+  \item \textbf{Design} the mapping. Decide which entities to model, which classes to assign, and which fields are relationships between entities. Mint IRIs from stable identifiers, in a namespace that reflects the domain. Determine how missing values look in the data, and how to handle fields where units, currencies, or scales may be attached. Finally, decide how many queries are needed to cover all the data without loss.
+  \item \textbf{Test} each query under a short, descriptive name, and check that it runs and produces well-formed output.
+  \item Optionally, \textbf{check} the design against the competency questions, if given, by sketching a SPARQL query for each question over the graph the queries would produce. A question that cannot be answered, or only with an overly complex query, points to a gap in the model.
+  \item \textbf{Submit} the queries once they are complete.
+\end{enumerate}
+The competency questions are presented as a minimum, not as the scope of the model: the agent must not narrow the model to the questions at the expense of coverage.
+
+\paragraph{Rules:}
+In initial experiments, we observed several recurring errors in the generated queries. We therefore added the following rules to the prompt to steer the agent away from them:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item Every entity should receive an \texttt{rdfs:label}, but the label must not be a required pattern, since a missing label would otherwise drop the entity.
+  \item Values that are actually missing should be read in OPTIONAL, so that they do not suppress the other triples of the entity. OPTIONAL however, should not be used as a blanket pattern for values that are always present.
+  \item An entity referenced by several queries must be minted with the same IRI pattern in each, and the same predicates and namespace be used for the same concept, so that the queries combine into one coherent graph.
+  \item A unit, currency, or scale encoded in a column name, as in \texttt{height\_cm}, should ideally not be lost while conversion.
+\end{itemize}
+
+\paragraph{Generation Agent Tools:}
+In an early version of our approach, the agent submitted its queries by writing out their full text. This caused two problems. First, the agent had to retype queries it had already tested, and could introduce new errors in doing so. Second, when resubmitting after review feedback, it sometimes left out queries it had not changed, and their data silently disappeared from the output.
+
+We therefore separate testing a query from submitting it. The generation agent works with two collections: the \emph{saved queries}, which hold the latest tested text of every query under its name, and the \emph{submitted set}, which is the final set of queries that are submitted for review. Four tools operate on these collections:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \texttt{propose\_construct} takes a name and a query, saves the query under the name, and tests it on \(G_D\). It returns up to 20 of the produced triples, or the error message.
+  \item \texttt{list\_constructs} lists all saved queries, with whether each is submitted and whether its latest test succeeded.
+  \item \texttt{get\_construct} takes a name and returns the exact saved text of the query.
+  \item \texttt{submit\_construct} takes the names of all queries that form the set, and replaces the submitted set by these saved queries. It reports which queries were added, updated, and dropped.
+\end{itemize}
+A query goes through the following life cycle:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Propose.} The agent proposes a new CONSTRUCT query under a name and saves it. The agent can propose a query with the same name to update it, and the saved text is always the latest version.
+  \item \textbf{Test.} The agent tests the proposed query with \texttt{propose\_construct}. A test succeeds if the query runs and produces at least one triple. If the query fails or produces no triples, the agent is asked to revise the query. Since the saved text will later be submitted, a \texttt{LIMIT} or \texttt{OFFSET} that the agent adds itself would truncate the final output. It is therefore removed from the saved text, and the agent is informed.
+  \item \textbf{Inspect.} The agent can check which queries it has saved and submitted, and read the exact text of a saved query, for example to reuse its IRI patterns in another query.
+  \item \textbf{Submit.} The agent submits by calling \texttt{submit\_construct} with the names of all queries that form the set. From the saved queries, it creates the submitted set as per these names. If a name is empty, duplicated, has no saved query, or belongs to a query whose latest test failed, the call is rejected, and the submitted set remains unchanged. An accepted submission starts the review.
+  \item \textbf{Revise.} After review feedback, the agent tests revised versions of its queries under their existing names, and submits the set again. Queries that it did not revise keep their saved text, and are submitted unchanged.
+  \item \textbf{Delete.} A previously submitted query whose name is left out of a new submission is dropped from the set, for example when its data is now produced by another query. The agent is asked to state the reason in the argument \texttt{removed}: why the query is no longer needed, and where its data is covered now. The reasons are collected across all review rounds.
+\end{itemize}
+This life cycle resolves both problems of the earlier version. The submitted query is always the one that passed the test, since the agent never retypes a query, and no query disappears unnoticed: every submission reports the dropped queries, and dropping a query requires a deliberate decision, ideally with a stated reason.
+
+\paragraph{Review agent:}
+Iterative refinement, in which an LLM revises its output based on feedback, is an established technique for improving LLM output. However, when an LLM only reconsiders its own output, such self-correction often fails to improve the result. The submitted queries are therefore checked by an independent review agent. It has the same exploration tools and access to \(G_D\) as the generation agent, but not its trace, so it does not inherit the generation agent's assumptions. The reviewer is instructed not to trust the queries as written, but to verify every aspect by querying \(G_D\), and to report only issues that it has verified.
+
+Every accepted submission starts a review round, which proceeds in three stages. First, the coverage of the source data is computed mechanically. Then, the review agent checks the submitted queries against a checklist, with the computed coverage as additional input. Finally, the reviewer returns a verdict, which decides how the run continues. We describe the three stages in this order.
+
+\paragraph{Computing source coverage.}
+Of all aspects that the reviewer has to check, source coverage is the most important. As per our initial experiments, it was clear that as the schema size increases, it becomes more likely that the agent misses a lot of the columns from the source data, in its proposed queries. Before the reviewer starts, we therefore compute coverage mechanically by comparing the predicates of \(G_D\) with the predicates that the submitted queries mention.
+\begin{enumerate}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Listing the source predicates.} A SPARQL query lists every predicate of \(G_D\), together with its number of triples. Since every column of a table becomes a predicate in the generic KG, this list corresponds to the columns of \(D\).
+  \item \textbf{Collecting the referenced IRIs.} For every submitted query, all IRIs that the query mentions are collected. These are full IRIs and prefixed names, which are expanded using the prefix declarations of the query. The keyword \texttt{a}, the SPARQL shorthand for \texttt{rdf:type}, counts as a reference to \texttt{rdf:type}.
+  \item \textbf{Comparing.} A source predicate counts as covered if at least one query mentions it.
+\end{enumerate}
+The result is added to the reviewer's prompt: the number and percentage of covered predicates, and the list of uncovered predicates, ordered by their number of triples, so that the predicates that carry the most data come first. The check is an upper bound on the actual coverage, since a predicate that a query mentions may still lose values, for example through a filter or a missing OPTIONAL. But it is intended to guide the review agent's attention so that it can focus on the most important issues first. If the source predicates cannot be listed, for example because the endpoint fails, the reviewer is told to check coverage itself.
+
+\paragraph{Checklist.}
+The review agent receives the submitted queries, the computed coverage, and a checklist of aspects to verify:
+\begin{itemize}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Source coverage.} All data of \(G_D\) is accounted for by the queries, and nothing significant is missing. For every uncovered predicate in the computed coverage, the reviewer reports whether it matters and what should be added to cover it, unless its data is represented in some other way.
+  \item \textbf{Value types.} For each predicate in the output, the type of its values is appropriate: a literal where a value is expected, and an IRI where a relationship to another entity is intended.
+  \item \textbf{Relationship modeling.} The reviewer should first query \(G_D\) to independently identify which relationships exist between entities in the data, and then checks that the queries model them. Every field that refers to another entity must become an IRI link to that entity, not remain a raw literal, regardless of whether the entity is minted in the same query or in a different one.
+  \item \textbf{Consistency.} The same real-world entity is minted with the same IRI pattern wherever it is referenced, within a query and across queries.
+  \item \textbf{Namespace consistency.} All custom predicates and entity IRIs use one namespace, which reflects the domain of the data. The reviewer judges this from the full IRIs, not from the prefix names used in the queries.
+\end{itemize}
+Depending on the submission, the checklist contains further items. If competency questions are given, two items are added:
+\begin{itemize}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Competency question coverage.} For each question, the reviewer writes the SPARQL query that would answer it over the graph that the queries produce. It cannot execute this query, since that graph does not exist yet, but writing it serves as a usability test of the model: a question that cannot be answered, or only with an overly complex query, points to a gap in the model, and the reviewer names the part of the model responsible.
+  \item \textbf{Competency question scope.} It is specified to the reviewer that the questions are a minimum, not the full scope of the model. The reviewer checks that the model was not narrowed to the questions at the expense of source coverage.
+\end{itemize}
+If several queries are submitted, one more item is added:
+\begin{itemize}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Cross-query consistency.} The queries form one coherent graph: the same entity is named and modeled consistently across queries, the same predicates and namespace are used for the same relationship, and every entity type referenced by more than one query is minted with the same IRI pattern.
+\end{itemize}
+
+\paragraph{Verdict and review loop.}
+The reviewer ends its round with one of three verdicts, together with feedback that describes the issues it found: \emph{done}, if the queries are correct and complete; \emph{refine}, if they need targeted fixes; or \emph{retry}, if the overall approach must be reworked. For \emph{refine} and \emph{retry}, the feedback is passed to the generation agent as a new message, and the agent revises and resubmits its queries as described above, which starts the next round. The loop ends when the verdict is \emph{done}, or when the configured maximum number of review rounds is reached. In the latter case, the output is marked as submitted with unresolved issues, so that such runs can be distinguished in the evaluation.
+
+The reviewer is itself an LLM agent and can fail: its run may end with an error, or without a verdict. Such a failure says nothing about the queries, so the reviewer is run again on the same queries, up to three times. These attempts do not count as review rounds. Only if all attempts fail are the queries output without a review, marked as unreviewed.
+
+\paragraph{Output.}
+A run produces the submitted set of named CONSTRUCT queries, the reasons given for dropped queries, and the last verdict, with its feedback, the number of review rounds, and whether the review budget was exhausted. We also store the complete traces of both agents, which we use to analyze the behavior of the agents in Chapter~\ref{sec:experiments}.
+
+% \subsection{Materializing the Semantic KG}\label{sec:approach-materialize}
+
+% To obtain the semantic KG, each query of the submitted set is executed on the QLever endpoint of (G_D), and the resulting triples are written to one N-Triples file. Three practical issues arose. First, queries must be sent with HTTP POST rather than GET@. With GET, the query becomes part of the request line, and QLever drops requests whose request line and headers exceed 8~KiB without responding; a long CONSTRUCT query then fails with a reset connection, which looks like a server failure rather than an oversized request. Second, QLever's output is not valid N-Triples by default: numeric literals are written in Turtle shorthand unless N-Triples is requested explicitly, and constants from the CONSTRUCT template are emitted unquoted even then. We type such constants following Turtle's rules (e.g.\ 1 as xsd:integer). Third, the output can contain the same triple several times, both within one query (e.g.\ when the WHERE clause is a cross product) and across queries. We therefore remove duplicates from the file, and all counts refer to distinct triples.
+
+
+
+%-----------------------------------------------------------------------
+
+\subsection{Baseline}\label{sec:approach-baseline}
+We compare our approach with a baseline that uses a general-purpose coding agent for the same task. We use OpenCode \citep{opencode}, an open-source agent that runs in the terminal and works on the files of a project directory (Section~\ref{sec:bg-agents}). Its tools are generic: it can read and write files, search them, and run shell commands.
+
+\paragraph{Task and input:}
+The baseline solves the same task as our generation agent: it writes a set of CONSTRUCT queries that transform the generic KG \(G_D\) into a semantic KG. Unlike our approach, it does not access \(G_D\) through a SPARQL endpoint, but receives it as an N-Triples file, the same sample that our approach explores via a SPARQL endpoint. In the corresponding configuration, it additionally receives the competency questions. It writes its queries as files into a given output folder, and refrains from accessing any other files.
+
+Since it's a general-purpose coding agent, the baseline has to explore the data with its generic tools, for example by searching the N-Triples file for the predicates of a table. For the same reason, it cannot directly execute the CONSTRUCT queries it writes. Whether and how it tests them is left to the agent so as to not constrain its behavior.
+
+\paragraph{Prompt:}
+To make the comparison fair, the prompt of the baseline mirrors that of our generation agent wherever possible. It describes the same task, asks the agent to proceed in the same steps, and contains the same rules (Section~\ref{sec:approach-construct}). Since the baseline has no independent reviewer, its prompt additionally contains the reviewer's checklist as a self-review: before finishing, the agent is asked to verify its queries against the input file, as per the given checklist.
+
+\paragraph{Differences to our approach:}
+The baseline thus receives the same data, task, and instructions, and produces the same kind of output. It differs in three ways:
+\begin{itemize}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Exploration.} Unlike our approach that can leverage the exploration tools, notes, search indices, shapes provided by GRASP, the baseline explores the data only as a file, with generic tools.
+  \item \textbf{Testing.} The baseline is free to test its queries for example using rdflib or Oxigraph to run them on the N-Triples file, but it does not have the same testing as our approach, where the agent can test each query on the SPARQL endpoint and receive a sample of the produced triples or an error message and revise the query until it runs successfully. 
+  \item \textbf{Review.} It is upto the baseline agent to decide how to generate and test the queries. Its queries are not checked by an independent reviewer with a mechanical coverage check, but only by its own self-review.
+\end{itemize}
+Since both approaches produce CONSTRUCT queries over the same generic KG, we materialize and evaluate their outputs in the same way. The CONSTRUCT queries are executed on the QLever endpoint of \(G_D\), and the resulting triples are written to an N-Triples file.
+
+% To assess the contribution of GRASP (RQ2), we compare our approach with a general-purpose coding agent, OpenCode \citep{opencode} (Section~\ref{sec:bg-agents}). Such an agent can solve the same task in a different way: it can read the generic KG as a file, and write a program that converts it. The comparison therefore shows whether the exploration tools of GRASP lead to better modeling than generic tools for reading files and running commands.
+
+% To make the comparison fair, the baseline receives the same information as our approach wherever possible. It gets \(G_D\) as an N-Triples file, and the task of producing CONSTRUCT queries. Its prompt mirrors that of our generation agent, with the same steps, the same rules, and, in the corresponding configuration, the same competency questions. It also contains the reviewer's checklist, as a self-review before the agent finishes. 

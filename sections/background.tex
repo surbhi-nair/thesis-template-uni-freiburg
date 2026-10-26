@@ -1,0 +1,146 @@
+\section{Background}\label{sec:background}
+
+This chapter introduces the relevant concepts that our approach uses or builds upon. 
+% Section~\ref{sec:bg-construct} explains SPARQL CONSTRUCT queries, which are the output of our approach. Section~\ref{sec:bg-agents} explains how LLM agents use tools, and introduces the general-purpose coding agent that serves as our baseline. Section~\ref{sec:bg-grasp} describes GRASP, the agent framework that our approach extends.
+
+\subsection{SPARQL CONSTRUCT Queries}
+\label{sec:bg-construct}
+The central artifact of this thesis is a set of SPARQL CONSTRUCT queries: our approach generates these queries, and executing them on the input generic KG yields the semantic KG\@. The quality of the output therefore depends entirely on the quality of the queries. Before describing how our approach generates such queries, we explain how a CONSTRUCT query is structured.
+
+SPARQL \citep{world2013sparql} supports four query forms, one of which is the CONSTRUCT form. It returns an RDF graph constructed by substituting variables in a set of triple templates.
+
+\begin{figure}[!htbp]
+  \centering
+  \includestandalone[width=\textwidth]{assets/construct_theory}
+  \caption{A CONSTRUCT query over a sample RDF KG}
+  \label{fig:construct-anatomy}
+\end{figure}
+\FloatBarrier
+
+As shown in Figure~\ref{fig:construct-anatomy}, a CONSTRUCT query consists of two parts:
+\begin{itemize}
+  \item a \emph{template} which describes the triples that the query produces 
+  \item a WHERE clause which describes which data the query reads from the input graph. Its triple patterns are matched against the input graph.
+\end{itemize}
+
+
+For every solution of the WHERE clause, the variables in the template are replaced by their values, and the resulting triples are added to the output graph. The output graph is the set union of these triples. 
+
+So, in the example given in Figure~\ref{fig:construct-anatomy}, the template states that a movie has the type \texttt{imdb:Movie}, a label, and a start year. In the WHERE clause, the first pattern selects every node of class \texttt{table:title}, that is, every row of the table \texttt{title} in the generic KG\@. The other two patterns read the identifier of each such row into \texttt{?id} and its title name into \texttt{?name}. All three patterns must match for a row to be selected.
+
+\emph{BIND} computes a new value from values that were already matched, and assigns it to a new variable. In the figure, BIND appends the identifier of the movie to the IMDb namespace and converts the resulting string into an IRI with the function \texttt{IRI}. This is how a query mints IRIs for the entities it creates.
+
+\emph{OPTIONAL} marks a part of the WHERE clause that may fail to match without discarding the entire row. In the figure, the start year is optional. If a row has a start year, \texttt{?y} is bound to it, and the inner BIND converts it into an integer \texttt{?year}. If a row has no start year, the row is still selected, but \texttt{?y} and \texttt{?year} remain \emph{unbound}, that is, they have no value. In this case, the template triple that uses \texttt{?year} is skipped for this row, and the output graph contains no triple about the start year of this movie.
+%, so duplicate triples are removed.
+
+\paragraph{Execution:}
+Figure~\ref{fig:construct-anatomy}b shows how a SPARQL engine executes the query on two rows of the input graph. Execution proceeds in three steps \citep{world2013sparql}.
+
+\begin{enumerate}
+  \item \emph{Matching.} The engine finds all ways in which the WHERE clause matches the input graph. Each match is called a \emph{solution} and assigns a value to every variable that the match binds. In the figure, the two rows yield two solutions. The second solution leaves \texttt{?year} unbound, because its row has no start year.
+  \item \emph{Instantiation.} For each solution, the engine replaces the variables in the template by their values. Each solution thus yields a copy of the template with concrete values. If a template triple contains a variable that is unbound in this solution, that triple is left out, while the other triples of the same solution are kept. In the figure, this happens to the start-year triple of the second solution. A triple is also left out if it is not valid RDF, for example if a literal ends up in the subject or predicate position. Template triples without any variables are copied into the output unchanged.
+  \item \emph{Combination.} The engine combines the triples of all solutions into one RDF graph by set union.
+\end{enumerate}
+
+\paragraph{Caveats:} While the execution of a CONSTRUCT query is straightforward, it has some caveats that are important for our approach.
+\begin{itemize}
+  \item \emph{Required patterns discard whole rows.} Every triple pattern of the WHERE clause that is not inside OPTIONAL must match \citep{world2013sparql}. If a row has no value for such a pattern, the row yields no solution, and none of its triples appear in the output. In the figure, a title without a primary title would therefore disappear entirely. The same happens if a predicate in the WHERE clause is misspelled: the pattern matches nothing, and every row is discarded. Values that may be missing must therefore be read in OPTIONAL.
+  \item \emph{IRIs must be minted consistently.} In RDF, two different IRIs are two different nodes. A query therefore refers to the same entity from several places only if it computes the same IRI each time. If two parts of a query mint the IRI of a person with different expressions, the output contains two separate nodes, and nothing in the graph indicates that they describe the same person.
+  \item \emph{Blank nodes are fresh per solution.} A blank node in the template denotes a new node for every solution \citep{world2013sparql}. Triples from different solutions therefore never share a blank node. Blank nodes are thus unsuitable for entities that are referenced from several solutions or several queries.
+  % \item \emph{Failed computations are silent.} If the expression in a BIND cannot be computed, the query does not stop. Instead, the variable remains unbound for that solution, and execution continues \citep{world2013sparql}. For example, IMDb marks missing values with the string \texttt{"\textbackslash N"}. Converting this string into a number with \texttt{xsd:integer} fails, so the variable stays unbound, and every template triple that uses it is left out. No error message indicates that this happened.
+  % \item \emph{Several values per property multiply the solutions.} Each way in which the WHERE clause matches the input graph is a separate solution. If a row has two values for a property, it therefore yields two solutions. If the WHERE clause reads two such properties, it yields one solution for each combination of their values. For example, a title with three genres and two directors yields $3 \times 2 = 6$ solutions. Triples that do not depend on these values, such as the type of the movie, are then produced six times. Set union keeps only one copy in the output graph, but the engine still has to compute all six solutions, which can make a query slow.
+\end{itemize}
+A CONSTRUCT query is executed by a SPARQL engine. In this thesis, we use QLever \citep{bast2017qlever}, which loads the generic KG $G_D$ and materializes the output graph $Q(G_D)$. The size of the query depends only on the schema of $D$, not on the number of rows. The query is therefore a compact representation of the entire conversion, which can be read, corrected, and executed again on new data.
+
+\subsection{LLM Agents and Tool Calling}
+\label{sec:bg-agents}
+
+An LLM agent is an LLM that solves a task by interleaving reasoning with actions in an environment, and by observing the results of these actions \citep{yao2023react}. In current LLM APIs, actions are implemented as \emph{tool calls}. The agent is given a set of tools, each described by a name, a description, and a schema of its parameters. In each step, the LLM either produces a final answer or emits a call to one of the tools with required arguments. The runtime executes the call and returns its result to the LLM as a new message, and the LLM continues with the next step. This loop ends when the LLM produces its final answer or when a maximum number of steps is reached.
+
+The capabilities of an agent are thus determined by its tools. A \emph{general-purpose AI coding agent} is equipped with generic tools: reading and writing files, searching a code base, and running shell commands. With these tools, it can solve a wide range of tasks, for example by writing and executing scripts. OpenCode \citep{opencode} is an open-source coding agent of this kind, which runs in the terminal and supports models from many providers. One can also configure their own LLM instances to work with the agent.
+
+\subsection{GRASP}\label{sec:bg-grasp}
+
+GRASP \citep{walter2025grasp} is an LLM-based agent originally designed for generating SPARQL queries over RDF knowledge graphs. Its central idea is that the agent is not given a description of the KG in advance, but explores it itself. Through a set of tools, the agent searches indices of the entities, properties, and literals of the KG, lists the triples of individual entities, and executes SPARQL queries. In this way, it learns how the KG is structured and what data it contains, before it writes its final query. In this thesis, we aim to extend GRASP with a new task, in which the output is a set of CONSTRUCT queries instead of a SELECT query. In the following, we describe the features of GRASP that this task particularly uses.
+
+\paragraph{Tools:}
+The agent explores the input KG with a set of tools. The functions \texttt{search\_entity}, \texttt{search\_property}, and \texttt{search\_literal} search for specific data in the KG. For this, GRASP builds three search indices per KG: a fuzzy index for entities and an embedding index each for properties, and for literals. The function \texttt{search\_property\_of\_entity} searches the properties used by a given entity, and \texttt{search\_object\_of\_property} searches the common objects of a given property. The function \texttt{execute} runs an arbitrary SPARQL query and returns a preview of its results. If a shape index is available, the functions \texttt{search\_shape} and \texttt{get\_shape} additionally return the shapes of classes.
+
+\paragraph{Shapes:}
+A shape index describes the class structure of the input KG\@. Typically, for each class, the shape lists the properties that its instances use, together with the type of their values: a datatype for literals, or, for properties that point to other entities, the class of these entities. In addition, the shape lists the incoming properties of the class in a separate list (\texttt{incoming}): properties of other classes whose values are instances of this class, together with the class they come from.
+
+% Properties that many instances lack are marked as optional with a question mark, and if the values of a property have more than one type, all of them are listed in brackets.  Internally, the shape also records how many instances use each property.
+\begin{figure}[!htbp]
+\begin{lstlisting}[language=Turtle, basicstyle=\ttfamily\scriptsize, columns=fixed, xleftmargin=0pt]
+{ 
+  "iri": "<table/person>",
+  "profile": {
+    "total_entities": 4,
+    "properties": [
+      { 
+        "iri": "<person/id>", 
+        "triple_count": 5, 
+        "entity_count": 4,
+        "targets": [{ "type": "literal", "datatype": "xsd:int", "triple_count": 4 }] 
+      },
+      { 
+        "iri": "<person/name>", 
+        "triple_count": 4, 
+        "entity_count": 4, 
+        "targets": [{ "type": "literal", "datatype": "xsd:string","triple_count": 4 }] 
+      },
+    "incoming": [
+      { 
+        "iri": "<ref/movie/director_id>", 
+        "triple_count": 745, 
+        "entity_count": 3,
+        "targets": [{ "type": "class", "iri": "<table/movie>","triple_count": 745 }] 
+      }] 
+  },
+}
+\end{lstlisting}
+\caption{GRASP sample shape format for one class}
+\label{fig:grasp-shape}
+\end{figure}
+\FloatBarrier
+
+% \vspace{0.6em}
+% \begin{lstlisting}[basicstyle=\ttfamily\scriptsize, columns=fixed, xleftmargin=0pt]
+% <table/alignment> {
+%   <alignment/id>                 [ xsd:int xsd:integer ] ;
+%   <alignment/alignment>          xsd:string ;
+%   rdf:type                       rdfs:Class ;
+%   ^<ref/superhero/alignment_id>  <table/superhero> ;
+% }
+% \end{lstlisting}
+% \centering\small (b) The same shape, as returned to the agent
+
+\paragraph{Notes:}
+Before the agent is used on a KG, GRASP also has the feature to let it explore the KG freely and record its observations as notes. These notes may then be used in other tasks so that that it starts with knowledge that would otherwise have to be gathered again with exploration. Figure~\ref{fig:grasp-notes} shows sample notes recorded for a database related to superheroes. They describe both schema and data characteristics.
+
+\begin{figure}[!htbp]
+\small
+\begin{enumerate}[leftmargin=*, itemsep=1pt]
+  \item Main class structure: \texttt{person} has \texttt{id}, \texttt{person\_name}, \texttt{full\_name} (optional), \texttt{height\_cm}, \texttt{weight\_kg}, and foreign key references to \texttt{colour(eye/hair/skin)} , \texttt{gender}, \texttt{race}, \texttt{publisher}, and \texttt{alignment} tables.
+  % \item Junction tables: \texttt{hero\_power} links \texttt{superhero} to \texttt{superpower} (many-to-many). \texttt{hero\_attribute} links \texttt{superhero} to \texttt{attribute} with an integer \texttt{attribute\_value} (e.g., Intelligence=80). Both use \texttt{\_rowN} naming for instances.
+  % \item Reference tables: \texttt{alignment} (4 values: Good/Bad/Neutral/N/A), \texttt{gender} (3 values: Male/Female/N/A), \texttt{colour} (many values like Brown/No Colour), \texttt{race} (many values like Bolovaxian/-) [\ldots]
+  \item Naming patterns: Tables use \texttt{table/\{name\}}. Rows use \texttt{row/\{table\}/\{id\}} or \texttt{\_rowN} for junction tables. Properties: \texttt{ref/\{table\}/\{fk\}\_id} for foreign keys, \texttt{\{table\}/\{field\}} for direct properties.
+\end{enumerate}
+\caption{GRASP sample structural notes}
+\label{fig:grasp-notes}
+\end{figure}
+
+
+% \paragraph{Shapes.}
+% A shape index describes the class structure of a KG: for each class, which properties its instances typically have, together with their datatypes and cardinalities. Since KGs differ in how they assign classes to instances, a setup agent first determines the class-typing pattern of the KG, for example \texttt{rdf:type}. GRASP then profiles the instances of each class and builds the index.
+
+% \paragraph{Notes.}
+% GRASP can take notes about a KG, which are included in the prompt of later runs. With \texttt{grasp notes explore}, the agent explores the KG freely, without task samples, and records its observations. In the \emph{structural} mode, the notes describe the content and modeling of the KG, for example its domain, frequent properties, and modeling patterns. In the \emph{functional} mode, the agent explores the KG with the search indices and records how the tools behave on this KG, for example which index to use for which kind of lookup.
+
+% \paragraph{Tools.}
+% The agent explores a KG with the following tools. The functions \texttt{search\_entity}, \texttt{search\_property}, and \texttt{search\_literal} search the indices described below and return up to ten matches per page. The function \texttt{search\_property\_of\_entity} searches the properties used by a given entity, and \texttt{search\_object\_of\_property} searches the common objects of a given property. The function \texttt{search\_with\_filter} restricts a search to the results of a SPARQL query. The function \texttt{list} returns the triples that match a given subject, property, or object, and the function \texttt{execute} runs an arbitrary SPARQL query and returns a preview of its results. If a shape index is available, the functions \texttt{search\_shape} and \texttt{get\_shape} additionally return the shapes of classes.
+
+% \paragraph{Indices.}
+% GRASP builds three search indices per KG: one for entities, one for properties, and one for literals. The data for each index is retrieved from the endpoint with a SPARQL query that returns, for every item, its labels and aliases. By default, GRASP builds a fuzzy index for entities and an embedding index for properties and literals. The command \texttt{grasp setup} can generate the index queries automatically: an agent explores the endpoint and writes queries suited to the KG, together with its prefixes and a short description.
+
+% For a generic KG, these components describe the source data from several angles. The indices make the values of the data searchable. Since every row of the generic KG is typed with the class of its table, the shapes summarize the columns of each table. The notes record observations about the data and its modeling. Our approach provides all of them to the agents that generate and review the CONSTRUCT queries.

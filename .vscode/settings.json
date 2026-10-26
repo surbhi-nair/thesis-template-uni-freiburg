@@ -3,7 +3,9 @@
   "git.confirmSync": false,
   "git.autofetch": true,
   "editor.formatOnSave": true,
-  "explorer.autoRevealExclude": { "**/main.pdf": true },
+  "explorer.autoRevealExclude": {
+    "**/main.pdf": true
+  },
   "[latex]": {
     "editor.defaultFormatter": "James-Yu.latex-workshop"
   },
@@ -27,18 +29,32 @@
         "-pdf",
         "-output-directory=%OUTDIR%",
         "%DOC%"
-      ]
+      ],
+      "env": {
+        "PATH": "/Library/TeX/texbin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
+      }
     },
     {
       "name": "makeglossaries",
       "command": "makeglossaries",
-      "args": ["-d", "%OUTDIR%", "%DOCFILE%"]
+      "args": [
+        "-d",
+        "%OUTDIR%",
+        "%DOCFILE%"
+      ],
+      "env": {
+        "PATH": "/Library/TeX/texbin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
+      }
     }
   ],
   "latex-workshop.latex.recipes": [
     {
       "name": "latexmk → makeglossaries → latexmk",
-      "tools": ["latexmk", "makeglossaries", "latexmk"]
+      "tools": [
+        "latexmk",
+        "makeglossaries",
+        "latexmk"
+      ]
     }
   ],
   "cSpell.enabled": true,

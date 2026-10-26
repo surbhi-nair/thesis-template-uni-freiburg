@@ -1,0 +1,191 @@
+\section{Introduction}\label{sec:introduction}
+A large share of today's data is stored in relational databases and CSV files. Converting such data into RDF knowledge graphs (KGs) makes it reusable and queryable beyond the application it was designed for, but only if the data is modeled well. In this thesis, we investigate to what extent an LLM agent can automate this modeling by generating SPARQL CONSTRUCT queries.
+
+\subsection{Motivation}\label{sec:motivation}
+The quality of converting structured data, such as relational databases or CSV files, into an RDF knowledge graph (KG) depends on how the data is modeled. Making structured data queryable with SPARQL is straightforward: the direct mapping from relational data to RDF has been standardized by the W3C \citep{w3c2012directmapping}. It turns every row into a node and every column into a predicate so the resulting graph reflects how the data is stored rather than what it describes. A semantically modeled KG, in contrast, represents domain concepts as entities, describes them with meaningful classes and properties, and expresses relationships between them using a well-designed ontology.
+
+Building a semantically modeled KG like this requires substantial manual effort and expertise: the ontology is traditionally designed manually with collaboration between domain experts and ontology specialists, often following methodologies that range from classical approaches \citep{fernandez1997methontology} to agile, industry-oriented frameworks such as LOT \citep{povedavillalon2022lot}. 
+
+Tools have automated the mechanical parts of the conversion: mapping languages such as RML \citep{dimou2014rml} declare how source data maps to RDF, engines such as Morph-KGC \citep{arenas2024morphkgc} execute these mappings at scale, and Tarql \citep{tarql} transforms CSV files with hand-written SPARQL CONSTRUCT queries. The central part, however, remains manual: understanding the domain and the source schema, and deciding how the data should be modeled. At scale, this becomes all the more challenging.
+
+Large language models (LLMs) are well-suited for this task. The required modeling decisions depend largely on the meaning of table names, column names, and values, which LLMs can interpret. Recent work confirms that LLMs can indeed be used to convert structured data into KGs. 
+
+Existing approaches follow two directions: direct triples extraction by an LLM \citep{hariri2025towards, pellegrino2025quality}, which is severely limited by the size of the data, or the LLM generates a declarative mapping, for example in RML, which a mapping engine then executes \citep{hofer2024towards, randles2024r2}. These experiments, however, are small in scale and domain-specific, or they rely on a target ontology that is given in advance.
+
+One direction that to our knowledge has not been explored yet, is to let an LLM generate SPARQL CONSTRUCT queries that transform an input KG into a semantically modeled one. This direction combines the advantages of the other two. Like a mapping, a CONSTRUCT query is an explicit artifact, which a human can inspect and correct, and its size depends only on the schema, not on the number of rows. Unlike an RML mapping, it requires no separate engine, since the query can be executed by the same SPARQL engine that hosts the data. 
+
+In this thesis, we therefore investigate to what extent an LLM agent can automate the semantic modeling of structured data by generating SPARQL CONSTRUCT queries, for relational datasets of varying schema complexity and without a target ontology specifically provided.
+
+% \todo[inline]{maybe add about how construct queries depend on the schema so we can also hit it on sample or full} % The queries in \(Q\) depend only on the schema of \(D\), not on its rows. The same \(Q\) can therefore be executed on any generic KG with the same schema, for example on a sample of \(D\) and on \(D\) itself.
+\subsection{Problem Statement}\label{sec:problem-statement}
+The goal of this thesis is to automate the step from the output of a direct mapping or a pre-existing knowledge graph to a semantically modeled one. Before we define this task formally, we illustrate the difference with a simple example.
+
+Figure~\ref{fig:imdb-tables} shows three tables of the IMDb dataset. The table \texttt{principals} connects titles to persons and records the role of each person in the column \texttt{category}. 
+
+\begin{figure}[!htbp]
+  \centering
+  \small
+  \begin{tabular}{lll}
+    \multicolumn{3}{l}{\textbf{title}} \\
+    \hline
+    \texttt{tconst} & \texttt{titleType} & \texttt{primaryTitle} \\
+    \hline
+    tt1 & movie & Heat \\
+  \end{tabular}
+  \qquad
+  \begin{tabular}{ll}
+    \multicolumn{2}{l}{\textbf{person}} \\
+    \hline
+    \texttt{nconst} & \texttt{primaryName} \\
+    \hline
+    nm01 & Michael Mann \\
+    nm02 & Al Pacino \\
+  \end{tabular}
+
+  \vspace{0.6em}
+  \begin{tabular}{llll}
+    \multicolumn{4}{l}{\textbf{principals}} \\
+    \hline
+    \texttt{tconst} & \texttt{ordering} & \texttt{nconst} & \texttt{category} \\
+    \hline
+    tt1 & 1 & nm01 & director \\
+    tt1 & 2 & nm02 & actor \\
+  \end{tabular}
+  \caption{Three tables of the IMDb dataset with selected columns.}
+  \label{fig:imdb-tables}
+\end{figure}
+
+In the generic KG shown in Figure~\ref{fig:generic-imdb-eg}, every row of \texttt{principals} becomes a node of its own, which sits between the movie and the person, and the role of the person is only a string attached to this node instead of being expressed as a predicate. The semantic KG instead connects the movie directly to its director and its actor, with the role expressed by the predicates \texttt{imdb:director} and \texttt{imdb:actor}. A direct mapping cannot produce such a model, because it would have to derive predicates from the values of a column.
+\begin{figure}[!htbp]
+  % \vspace{1em}
+  \begin{minipage}{0.95\textwidth}
+\begin{lstlisting}[language=Turtle, basicstyle=\ttfamily\scriptsize, columns=fixed, xleftmargin=0pt]
+<row/title/tt1> a <table/title> ;
+  <title/titleType>     "movie" ;
+  <title/primaryTitle>  "Heat" .
+
+<row/person/nm01> a <table/person> ;
+  <person/primaryName>  "Michael Mann" .
+<row/person/nm02> a <table/person> ;
+  <person/primaryName>  "Al Pacino" .
+
+<row/principals/tconst=tt1;ordering=1> a <table/principals> ;
+  <principals/category>   "director" ;
+  <ref/principals/tconst> <row/title/tt1> ;
+  <ref/principals/nconst> <row/person/nm01> .
+
+<row/principals/tconst=tt1;ordering=2> a <table/principals> ;
+  <principals/category>   "actor" ;
+  <ref/principals/tconst> <row/title/tt1> ;
+  <ref/principals/nconst> <row/person/nm02> .
+
+\end{lstlisting}
+
+  \vspace{0.3em
+  }
+\begin{lstlisting}[language=Turtle, basicstyle=\ttfamily\scriptsize, columns=fixed, xleftmargin=0pt]
+title:tt1 a imdb:Movie ;
+  rdfs:label    "Heat" ;
+  imdb:director name:nm01 ;
+  imdb:actor    name:nm02 .
+name:nm01 a imdb:Person ; rdfs:label "Michael Mann" .
+name:nm02 a imdb:Person ; rdfs:label "Al Pacino" .
+\end{lstlisting}
+  \end{minipage}
+  \caption{The generic KG of the IMDb tables (top) and a semantic KG of the same data (bottom).}
+  \label{fig:generic-imdb-eg}
+\end{figure}
+
+The difference becomes visible when the data is queried. To ask who directed \emph{Heat}, a query over the generic KG has to traverse the intermediate node and filter it by the string \texttt{"director"}, while a query over the semantic KG follows a single edge.
+
+\begin{figure}[!htbp]
+  % \vspace{1em}
+  \begin{minipage}[t]{0.53\textwidth}
+\begin{lstlisting}[language=SPARQL,basicstyle=\ttfamily\scriptsize, columns=fixed, xleftmargin=0pt]
+SELECT ?name WHERE {
+  ?t <title/primaryTitle> "Heat" .
+  ?p <ref/principals/tconst> ?t ;
+     <principals/category> "director" ;
+     <ref/principals/nconst> ?d .
+  ?d <person/primaryName> ?name .
+}
+\end{lstlisting}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[t]{0.41\textwidth}
+\begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed, xleftmargin=0pt]
+SELECT ?name WHERE {
+  ?t a imdb:Movie ;
+     rdfs:label "Heat" ;
+     imdb:director ?d .
+  ?d rdfs:label ?name .
+}
+\end{lstlisting}
+  \end{minipage}
+  \caption{The query ``Who directed \emph{Heat}?'' over the generic KG (bottom left) and over the semantic KG (bottom right).}
+  \label{fig:generic-vs-semantic}
+\end{figure}
+
+% Literals of key columns are omitted from the generic KG, as are its base IRIs; \texttt{title:} and \texttt{name:} abbreviate the IMDb namespaces for titles and persons.
+
+The semantic KG shown in this example is, however, only one of many valid choices. Another model could keep each row of \texttt{principals} as a node, but as an entity of the domain: a \emph{credit} of class \texttt{imdb:Credit}, which links the movie and the person, and refers to the role as an entity, such as \texttt{imdb:Director}, rather than as a string. Unlike the direct edges in Figure~\ref{fig:generic-vs-semantic}, this model also preserves the billing order recorded in the column \texttt{ordering}, at the cost of slightly longer queries. Both models are reasonable even while they differ slightly in structure. Since no target ontology is given, there is thus no single correct semantic KG, and therefore no reference graph against which a result could be compared. Instead, the quality of a semantic KG has to be judged by criteria that are independent of the chosen vocabulary and structure.
+
+% Figure~\ref{fig:generic-vs-semantic} shows three tables of the IMDb dataset, the KG obtained from them by a direct mapping, which we call the \emph{generic KG}, and a semantically modeled KG of the same data, which we call a \emph{semantic KG}. The table \texttt{principals} connects titles to persons and records the role of each person in the column \texttt{category}. In the generic KG, every row of \texttt{principals} becomes a node of its own, which sits between the movie and the person, and the role of the person is only a string attached to this node. The semantic KG instead connects the movie directly to its director and its actor, with the role expressed by the predicates \texttt{imdb:director} and \texttt{imdb:actor}. A direct mapping cannot produce such a model, because it would have to derive predicates from the values of a column. The difference becomes visible when the data is queried. To ask who directed \emph{Heat}, a query over the generic KG has to traverse the intermediate node and filter it by the string \texttt{"director"}, while a query over the semantic KG follows a single edge.
+To formalise this problem statement, we first introduce the key terminology used.
+\begin{itemize}
+  \item \(D\) is the input dataset, which has to be converted into a semantic KG\@. In this thesis, \(D\) is structured data, that is, a relational database or a set of CSV or TSV files.
+  \item \(G_D\) is the \emph{generic KG} of \(D\): the RDF graph obtained from \(D\) by a direct mapping in the style of the W3C Direct Mapping \citep{w3c2012directmapping}. Section~\ref{sec:approach} describes this in detail.
+  \item \(C = \{c_1, \ldots, c_m\}\) is an optional set of competency questions: natural-language questions that the semantic KG should be able to answer \citep{gruninger1995methodology}.
+  % \item $O$ is a target ontology or set of standard vocabularies that may be provided optionally to guide the modeling of $D$ into a semantic KG.
+  \item \(Q = \{q_1, \ldots, q_k\}\) is a set of SPARQL CONSTRUCT queries. Executing \(Q\) on \(G_D\) yields the graph
+  \[
+    Q(G_D) = \bigcup_{i=1}^{k} q_i(G_D).
+  \]
+  \item \(G = Q(G_D)\) is the output KG.
+\end{itemize}
+
+\paragraph{Task:} Given the generic KG \(G_D\) derived from \(D\) and, optionally the competency questions \(C\), the task is to find a set of CONSTRUCT queries \(Q\) such that \(G = Q(G_D)\) is a semantic KG of \(D\). Choosing the classes and predicates of \(G\) is part of the task. We judge whether \(G\) is a good semantic KG of \(D\) by three main requirements:
+\begin{enumerate}
+  \item \(G\) \emph{models the domain} of \(D\), not the structure of its schema;
+  \item \(G\) is \emph{faithful} to \(D\): it preserves the information of \(D\) and adds nothing that \(D\) does not claim; and
+  \item \(G\) is \emph{usable}: questions about the data can be answered over \(G\) with simple queries.
+\end{enumerate}
+
+%The queries in \(Q\) depend only on the schema of \(D\), not on its rows, so the same \(Q\) can be executed on any generic KG with the same schema, for example on a sample of \(D\) and on \(D\) itself.
+\clearpage
+\paragraph{Criteria:} We make each requirement concrete with a set of criteria.
+\subparagraph{Semantic Modeling:}
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textit{Entity and class modeling:} It concerns selection and granularity. Which real-world entities or domain concepts from the source data become entities in the semantic KG\@? Are the classes and entities at the right level of granularity, or are they too coarse or too fine?
+  %It also checks whether tables that only represent a relationship between two other tables become edges, not nodes.
+  \item \textit{Vocabulary:} Do the classes and predicates of \(G\) denote concepts of the domain, instead of repeating the source table and column names? And does each predicate have a single, precise meaning and the appropriate or preferred direction?
+  \item \textit{IRI design:} Are entity IRIs minted from stable identifiers of the source data, in a namespace that reflects the domain, and does the same entity receive the same IRI wherever it is referenced?
+  \item \textit{Relationships:} Where reference information is available, are the relationships of the source domain recoverable from \(G\), without \(G\) being a structural replica of the source schema?
+\end{itemize}
+
+\subparagraph{Fidelity:}
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textit{Schema coverage:} Is every data element(required tables/columns) of \(D\) carried over into \(G\)? 
+%   We measure this as the fraction of columns that are used by at least one query in \(Q\).
+%   \item \textit{Instance coverage:} Is the content of \(D\) preserved in \(G\)? 
+%   We measure this as the fraction of values in \(D\) that also appear in \(G\), where a change of datatype, for example from a string to a year, still counts as preserved.
+  \item \textit{Soundness:} Is everything in \(G\) supported by \(D\), that is, does \(Q\) not invent entities, values, or links?
+  \item \textit{Structural integrity:} Is \(G\) internally consistent? Every link should point to an entity that is actually described in \(G\), and each real-world entity should appear as exactly one node. For example, the same person should not appear under two different IRIs because two queries mint its IRI differently.
+  \item \textit{Literal typing:} Do literals carry datatypes that match their values?
+\end{itemize}
+\clearpage
+\subparagraph{Usability:}
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textit{Answerability:} Can a natural language question be answered over \(G\) with a SPARQL query, does this query return the correct answer, and how complex is it compared to a query over \(G_D\)?
+\end{itemize}
+
+\paragraph{Research questions:} Based on this task and these criteria, overall we aim to address the following questions from our experiments:
+\begin{enumerate}[label=\textbf{RQ\arabic*.}, leftmargin=*, itemsep=2pt]
+  \item Can an LLM agent that explores \(G_D\) generate a set of CONSTRUCT queries \(Q\) such that \(Q(G_D)\) can be considered a good semantic model as per the criteria above?
+  \item Does the approach proposed in this work yield better semantic modeling than a general-purpose LLM agent that is given the same input KG?
+  \item Does supplying competency questions as additional input change the resulting modeling, and does it improve it?
+  \item How does modeling quality change as the size and relational complexity of the schema grow, and what are the characteristic failure modes?
+\end{enumerate}
+\paragraph{Scope:}
+The input is structured data, that is, relational databases and CSV/TSV files, and not unstructured data such as text. Each dataset comes from a single source; we do not integrate several sources into one KG\@. The output is a materialized RDF graph, not a virtual graph over the source data and not a labeled property graph. The agent may treat placeholder values as missing, but correcting errors in the source data is not a part of the task. For large datasets, the agent explores a sample of the data rather than the complete data. Section~\ref{sec:approach} describes this implementation in detail. 
+% Finally, the agent is not given a target ontology in any of our experiments.

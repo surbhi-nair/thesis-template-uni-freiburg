@@ -11,30 +11,33 @@
 \pagenumbering{gobble}
 \include{sections/cover}
 \include{sections/information}
-\todo[inline]{Enter your data int the Declaration.}
+% \todo[inline]{Enter your data int the Declaration.}
 \iflanguage{english}{\include{sections/declaration_english}}{\include{sections/declaration_german}}
+\clearpage
+\iflanguage{english}{\include{sections/aiusage_english}}{}
 \include{sections/acknowledgements}
 
 \include{sections/quote}
 \include{sections/abstract}
-\include{sections/zusammenfassung}
+% \include{sections/zusammenfassung}
 
 \include{sections/table_of_contents}
 \pagenumbering{arabic}
-\include{sections/motivation}
-\include{sections/fundamentals}
-\include{sections/methodology}
-\include{sections/results}
-\include{sections/discussion}
+\include{sections/introduction}
+\include{sections/related_work}
+\include{sections/background}
+\include{sections/approach}
+\include{sections/experiments}
 \include{sections/conclusion}
 
 \pagenumbering{Roman}
-\include{sections/symbols}
+% \include{sections/symbols}
 \include{sections/figures}
 \include{sections/tables}
-\include{sections/algorithms}
-\include{sections/glossary}
+\include{sections/abbreviations}
+% \include{sections/algorithms}
+% \include{sections/glossary}
 \include{sections/references}
-\include{sections/appendix}
+% \include{sections/appendix}
 
 \end{document}

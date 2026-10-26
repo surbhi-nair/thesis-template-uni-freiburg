@@ -1,0 +1,118 @@
+\section{Related Work}\label{sec:related_work}
+
+This chapter reviews the related work done on KG construction or conversion of structured data into RDF knowledge graphs starting from conventional approaches to more recent work that uses LLMs.
+
+% Section~\ref{sec:rw-conventional} covers the conventional approaches for converting structured data into KGs, from direct mappings to declarative mapping languages. Section~\ref{sec:rw-llm} covers more recent work that uses LLMs to automate this conversion. Section~\ref{sec:rw-cqwork} covers work that uses competency questions to guide the conversion process and the section~\ref{sec:rw-eval} summarizes how these studies evaluate the quality of the resulting KGs\@.
+
+% \subsection{Ontology Engineering Methodologies}
+% \label{sec:rw-manual}
+
+% Ontologies for knowledge graphs - be it for converting existing datasets or creating new ones - have traditionally been designed by hand, following ontology-engineering methodologies. \citet{gruninger1995methodology} is the one that first introduced competency questions: natural-language questions that an ontology must be able to answer. The central idea in this work is that the design and evaluation of an ontology are the same activity: CQs define the requirements up front and then serve as the test that the axiomatised ontology must pass. 
+
+% \citet{noy2001ontology} describe a more practical, iterative process for building a first ontology: determining its domain and scope, considering existing ontologies for reuse, enumerating important terms, and then defining classes, their hierarchy, and their properties. LOT \citep{povedavillalon2022lot} is a more recent, industry-oriented framework. It organizes ontology development into requirements specification, implementation, publication, and maintenance, and it supports these activities with dedicated tools. All of these methodologies rely on the collaboration of domain experts and ontology engineers. Competency questions in particular have remained a central tool, and we use them as an optional input in this thesis (RQ3).
+
+\subsection{Conventional Approaches}
+\label{sec:rw-conventional}
+
+\subsubsection{Direct Mapping}
+The simplest conversion of structured data into RDF is a direct mapping. The W3C Direct Mapping \citep{w3c2012directmapping} defines how a relational database can be converted into RDF without any user input: every table yields a class, every row a subject, and every column a predicate; foreign keys yield links between rows.
+\[
+\text{Source Data} (D) \xrightarrow{\text{direct mapping}} \text{generic KG } (G_D)
+\]
+\[
+\text{Direct Mapping} = \{ \text{Table} \rightarrow \text{Class}, \text{Row} \rightarrow \text{Subject}, \text{Column} \rightarrow \text{Predicate} \}
+\]
+Direct mappings are fully automatic, one can use simple scripts to perform such a conversion, but their output reflects the structure of the source schema rather than the domain it describes. Their main aim is simply to make the data queryable through SPARQL\@. It does not provide a semantic interpretation of the data. In this thesis, we use a simplified direct mapping only as the first step, to obtain the generic KG \(G_D\) (Section~\ref{sec:problem-statement}).
+
+\subsubsection{Declarative Mappings}
+To obtain a semantic KG, a user must specify how the source data maps to a target vocabulary. Declarative mapping languages express this mapping as a set of rules. R2RML \citep{das2012r2rml} is the W3C recommendation for mapping relational databases to RDF\@. RML \citep{dimou2014rml} generalizes R2RML to heterogeneous sources such as CSV, JSON, and XML\@. Mapping engines such as Morph-KGC \citep{arenas2024morphkgc} execute these mappings and materialize the resulting KG at scale.
+\[
+\text{Source Data} (D) + \text{RML Mapping} \xrightarrow{\text{Mapping Engine}} \text{Semantic KG } (G)
+\]
+
+\[
+\text{Generic KG} (G_D) + \text{CONSTRUCT Query} \xrightarrow{\text{SPARQL Engine}} \text{Semantic KG } (G)
+\]
+
+An alternative is to express the mapping as a SPARQL CONSTRUCT query. Tools like Tarql \citep{tarql} apply a user-written CONSTRUCT query to each row of a CSV file. SPARQL Anything \citep{asprino2023facade} generalizes this idea: it exposes data in many formats through a generic RDF view, called Facade-X, which the user then transforms into the target vocabulary with SPARQL CONSTRUCT queries.
+
+% \todo{check that facade x actually claims this below thing or not}
+\citet{asprino2023facade} argue that mapping languages require users to know the quirks of the source format, the target ontology, and a dedicated mapping syntax at the same time, whereas a generic façade combined with a general-purpose query language only requires knowledge of SPARQL\@. This approach is the closest predecessor to our work. Our approach follows the same architecture: a generic KG, transformed by a CONSTRUCT query. The difference is that, in SPARQL Anything, the query has to be written by the user, while we let an LLM agent generate it.
+
+In all of these approaches, the mapping itself is written manually. The tools automate the execution of the conversion, but not the modeling decisions it encodes.
+
+% \subsubsection{Ontology Learning from Relational Databases}
+
+% Ontology learning aims to construct an ontology automatically or semi-automatically from existing data \citep{mosca2023ontology}. For relational databases, most approaches apply rules to the schema: tables become classes, columns become properties, foreign keys become relations between classes, and tables that only connect two other tables become many-to-many relations. Since these rules operate on the structure of the schema alone, they cannot interpret what the data means. For example, they cannot choose meaningful names for classes and predicates, or recognize that two tables describe the same kind of entity.
+
+\subsection{LLM-Based Knowledge Graph Construction}
+\label{sec:rw-llm}
+LLMs have recently been applied to many steps of KG construction, from ontology engineering to knowledge extraction and fusion \citep{bian2025llm}. They can read and write RDF and SPARQL with reasonable accuracy \citep{frey2023benchmarking, meyer2025llm}. 
+
+For the conversion of structured data, two main directions have emerged: direct triple extraction and mapping generation.
+
+\subsubsection{Direct Triple Extraction}
+In the first direction, the LLM receives the source data, usually in chunks or row by row, and outputs RDF triples directly. 
+\citet{tuozzo2024moving} does a small qualitative feasibility study to evaluate whether a GPT model can be used to convert a CSV file of KG quality metrics into RDF triples that conforms to the Data Quality Vocabulary. 
+
+\citet{pellegrino2025quality} extend this study to investigate the effectiveness of different prompting strategies with various LLMs. Due to input limitations, they restrict their experiments to 10 rows of the CSV file. They report that the models struggle with incomplete outputs, instability across runs, and hallucinations as the number of columns grows. 
+
+\citet{hariri2025towards} convert archaeological CSV data into RDF that conforms to CIDOC~CRM\@. They split the data into chunks of 20 rows and compare the performance of various prompting strategies across three settings: no ontology, the full ontology, and a subset curated by a domain expert. The setting without an ontology performs worst, and the curated subset performs best.
+
+Direct triple extraction has two inherent limitations. First, its cost grows with the size of the data, since the LLM is invoked for every chunk. Second, the LLM makes its modeling decisions anew for every chunk, so the same entity may receive different IRIs or types in different chunks. Moreover, no reusable artifact is produced that could be inspected, corrected, or executed again on new data.
+
+It is also to be noted that in these approaches, the target ontology was given, so the task is ontology population, and the LLM is not deciding the semantic model from scratch. If an LLM agent has to make modelling decisions such as which tables become edges or which predicates to use, that is a harder task than the one these studies evaluate.
+
+\subsubsection{Mapping Generation}
+In the second direction, the LLM generates a declarative mapping, which a mapping engine then executes. 
+
+% \citet{randles2024r2} use ChatGPT to support, rather than generate, uplift mappings. Their framework extracts the classes and properties used in an existing R2RML or RML mapping and asks ChatGPT for information about each term, such as its type, domain, range, and label, as well as sample SPARQL queries, SHACL shapes, and instance data. The returned terms were correct in about four out of five cases, and the generated code mostly parsed after a simple prefix repair step.
+
+\citet{hofer2024towards} let LLMs generate RML mappings from a single JSON record of IMDB data and a hand-selected subset of the DBpedia ontology, to which they deliberately added confusable properties. Mappings with syntax errors are given back to the model together with the parser's error message for up to two repair rounds. Valid mappings are executed with an RML engine, and the resulting KG is compared with a manually created reference. Of five commercial models, only Claude 3 Opus and GPT-4 regularly produced mappings that yielded triples.
+
+OntoGenix \citep{valcalvo2025ontogenix} goes one step further and also designs the ontology. Its agents first derive an ontology structure from a statistical summary of a CSV file, then write the ontology in Turtle, and finally generate an RML mapping that is executed with Morph-KGC\@. It experiments on 6 kaggle datasets but each dataset is only a single-csv file. Compared with ontologies built by humans for the same six datasets, the resulting ontologies are richer in annotations but structurally shallower, and they contain more modeling pitfalls.
+
+\citet{schmidt2025llm} generate YARRRML and RML mappings for three manufacturing data sources at Bosch, exported from relational databases as CSV files, against small existing ontologies. They vary how much data the model sees (column headers only, or the first 20 or 200 rows), how the ontology is reduced before prompting, and whether the prompt contains a mapping template or retrieved examples. Compared with expert-written mappings, the best configurations reach a relaxed triple F1 of about 0.7, while exact matching drops sharply because the generated IRIs differ from the reference.
+
+% LLM4VKG \citep{xiao2025llm4vkg} targets virtual knowledge graphs over relational databases. Structural patterns in the schema, such as entity tables, join tables, and foreign keys, are detected with rules, and each pattern determines the shape of the resulting mapping. The LLM is used only to match schema elements to terms of a given, possibly incomplete, ontology, and to name new classes and properties where no match exists. Evaluated on the RODI benchmark, where SPARQL queries over the generated graph are compared with equivalent SQL queries over the database, it outperforms earlier rule-based systems, with the largest gains on queries over object properties.
+
+\citet{trajanoska2025multi} map relational data to schema.org with a multi-agent system that processes one table at a time. A mapping agent assigns schema.org terms to columns, using candidate terms retrieved from an index over the vocabulary. A relation agent identifies primary and foreign keys and creates links between entities, and a validator agent reviews both steps. The output is an assignment of terms rather than an executable mapping, and its accuracy was judged manually on databases from five domains of the Spider benchmark.
+
+With the exception of OntoGenix, these approaches assume that a target ontology is given, and the LLM only selects terms from it. Moreover, they are evaluated on small datasets: a single JSON record, single CSV files, or a fixed set of test cases.
+
+% \citet{chaves2026editorial} observe that since KG construction requires deep understanding of the domain and the data, the mapping-based approaches remain predominantly manual. LLM-based automated KG constructionsystems either stop at semantic annotations or produce a KG without any declarative mapping, which raises open questions about explainability, reproducibility, and human oversight. Our approach sits between the two directions: an LLM generates the conversion, but the output is a declarative artifact.
+
+\subsection{Competency-Question-Driven Modeling}\label{sec:rw-cqwork}
+Several approaches use competency questions to guide LLM-based ontology engineering. CQs were introduced by \citet{gruninger1995methodology} as natural-language questions that an ontology must be able to answer. 
+
+The central idea is that the design and evaluation of an ontology are the same activity: CQs define the requirements up front and then serve as the test that the axiomatised ontology must pass. Later methodologies kept CQs as their requirements mechanism but changed how they are checked. Instead of proving logical entailment, as Grüninger and Fox did, they test CQs as queries against an implemented ontology, typically in SPARQL\@. This later, query-based sense is the one used in this thesis.
+
+With LLMs, CQs have also become an input to ontology generation, translating natural-language questions into formal ontologies. Ontogenia \citep{lippolis2024ontogenia} lets an LLM output an OWL ontology using 14 CQs about African wildlifeas input. There is no data, the CQs are the only description of the domain. The model first interprets each CQ, then splits it into subject, predicate, and object to identify classes and properties, extends the ontology with restrictions, and finally justifies its decisions and tests the ontology on example instances. 
+
+\citet{saeedizade2024navigating} generate OWL ontologies from ontology stories and their CQs. They point out that such input describes only the desired outcome, not how to model it. They compare zero-shot prompting, chain-of-thought variants, and two decomposition strategies across a range of models, and find that only GPT-3.5 and GPT-4 produce usable OWL\@. Their CQbyCQ technique processes one CQ at a time and merges each result into the growing ontology. 
+
+Evaluation is CQ-based: for each CQ, they check whether a SPARQL query answering it can be written against the generated ontology. This is particularly relevant for the purpose of evaluation in our experiments as well, as seen in section todo. Ignoring minor errors, GPT-4 with CQbyCQ comes close to the submissions of their student groups. It does particularly well on object properties and reified relations, but less well on restrictions. A follow-up study \citep{lippolis2025ontology} develops both techniques further and reports that o1-preview with Ontogenia outperforms novice ontology engineers.
+
+% \citet{kommineni2024human} use CQs to drive a full construction pipeline. An ontology is developed from the CQs, the CQs are answered with retrieval-augmented generation over scholarly publications, and the KG is built from concepts extracted from these answers. A judge LLM rates both the answers and the extracted concepts against a ground truth.
+
+Taken together, these works suggest that CQs are a promising tool for our setting, in both of the roles that \citet{gruninger1995methodology} intended. As an input, CQs have proven to be a workable basis for LLM-based modeling and even as an evaluation criterion, CQs give a direct and interpretable measure of whether a model serves its purpose, whether checked by writing a query for each question \citep{saeedizade2024navigating}, by scoring extracted triples against domain questions \citep{hariri2025towards}, or by executing paired queries over the source database and the generated graph \citep{xiao2025llm4vkg}. 
+
+Since CQs describe what a graph should be able to answer rather than how it should be modeled, they apply to the conversion of existing data just as they apply to designing an ontology from scratch. This makes them a natural fit for the modeling decisions that the source schema leaves open. So far, however, CQs have been given to LLMs as input only when designing ontologies, and the studies always included them, so their effect on the modeling has not been isolated. In our thesis, we aim to extend this line of work to the conversion of structured data and test directly whether supplying CQs changes the LLM's modeling decisions. 
+%Because the source data is available in our setting, each CQ can also be executed against the generated graph and its answer compared with a gold answer.
+
+% These approaches differ from ours in two ways. First, they produce an ontology from natural-language requirements, or a KG from text, rather than converting existing structured data. Second, in all of them, the CQs are present in every experimental condition. The studies compare prompting techniques or models, but, to our knowledge, none of them compares modeling with and without CQs. Whether CQs themselves change an LLM's modeling decisions is therefore still an open question, and this is what our RQ3 tests. In the data-to-KG work reviewed above, CQs appear only on the evaluation side: \citet{hariri2025towards} score extracted triples by how well they answer domain CQs, \citet{nayyeri2025rigor} have one LLM generate CQs and another rate ontology fragments against them, and \citet{schmidt2025llm} list CQs only to motivate their use case. None of them gives CQs to the model as input. Our setting also allows a stricter CQ check than ontology-only work. Because the source data is available, each CQ can be executed against the generated graph and compared with a gold answer, rather than only checked for whether a query can be written. This is similar to the query-based evaluation of RODI used by \citet{xiao2025llm4vkg}. 
+
+\clearpage
+\subsection{Evaluation in Related Work}
+\label{sec:rw-eval}
+Related works evaluate LLM-based KG construction at several levels. At the syntactic level, the output is parsed, for example with rdflib. \citet{martin2026performance} sort outputs into valid, recoverable, invalid, and empty. 
+
+\citet{hofer2024towards} additionally give the model up to two rounds to repair invalid outputs. At the level of the graph, the output is compared with a manually created reference. This comparison uses precision and recall of triples \citep{hariri2025towards, martin2026performance} or the F1 score of exact graph matches \citep{hofer2024towards}. 
+
+\citet{pellegrino2025quality} count the correctly identified entities, dimensions, and metrics, and repeat every experiment five times to measure stability. BLINKG evaluates individual mapping decisions instead of the resulting graph \citep{castedo2026blinkg}. 
+
+When the LLM also designs the ontology, its quality is assessed with structural metrics such as OQuaRE and with the pitfall scanner OOPS! \citep{valcalvo2025ontogenix, kommineni2024human}. Finally, \citet{kommineni2024human} and \citet{hariri2025towards} test whether the generated KG can answer a set of competency questions.
+
+Comparisons with a reference KG presuppose a fixed target vocabulary. Since we do not give a target ontology, a semantic KG produced by our approach may use different, but equally valid, classes and predicates than any reference. We therefore evaluate against the criteria defined in Section~\ref{sec:problem-statement}. Where possible, we use objective measures for fidelity, such as coverage and soundness. For the quality of the semantic modeling, we use a qualitative assessment, and for usefulness, we test whether competency questions can be answered.
+
+% \citet{castedo2026blinkg} introduce BLINKG, a benchmark for LLM-based mapping decisions. To separate the correctness of the mapping decisions from the correctness of the mapping syntax, the LLM outputs a mapping table instead of an executable mapping. The benchmark contains test cases of increasing difficulty: from basic cases, in which column names closely resemble ontology terms, to schema-distant cases, in which source schema and ontology were developed independently. --- Ontologies for knowledge graphs - be it for converting existing datasets or creating new ones - have traditionally been designed by hand, following ontology-engineering methodologies.

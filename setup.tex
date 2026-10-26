@@ -27,6 +27,8 @@
 
 \usepackage{amsmath, amsthm, amsfonts, mathtools}
 \usepackage{siunitx}
+% \usepackage[round]{natbib} % author-year citations; 
+\usepackage[numbers]{natbib} % use [numbers] instead of [round] for numeric style
 \usepackage{hyperref}
 \usepackage[all]{hypcap} % to show the full figure when clicking on it's reference
 \usepackage[dvipsnames]{xcolor}
@@ -45,6 +47,88 @@
 % Remove the next two lines for the final version without ToDos
 \usepackage[colorinlistoftodos]{todonotes}
 \setlength{\marginparwidth}{2cm} % make space for the ToDos
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
+\usepackage{placeins}
+\usepackage{enumitem}
+
+% for the construct query figure - starts
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing,calc,positioning,arrows.meta}
+\definecolor{prefixc}{RGB}{225,225,225}
+\definecolor{templc}{RGB}{214,230,248}
+\definecolor{wherec}{RGB}{253,231,206}
+\definecolor{wheredark}{RGB}{250,206,160}
+\definecolor{skipc}{RGB}{160,160,160}
+\newcommand{\hh}{\textasciicircum\textasciicircum}
+\newcommand{\strike}[1]{\setbox0\hbox{#1}\rlap{\rule[0.55ex]{\wd0}{0.5pt}}#1}
+\usepackage{standalone}
+% for the construct query figure - ends
+
+% for code listings -- starts
+\usepackage{xcolor}
+\usepackage{listings}
+ 
+\definecolor{lstkeyword}{RGB}{0,51,153}
+\definecolor{lstcomment}{gray}{0.45}
+\definecolor{lststring}{RGB}{163,21,21}
+\definecolor{lstiri}{RGB}{0,110,60}
+\definecolor{lstbg}{gray}{0.97}
+ 
+\lstdefinestyle{thesis}{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{lstkeyword}\bfseries,
+  commentstyle=\color{lstcomment}\itshape,
+  stringstyle=\color{lststring},
+  backgroundcolor=\color{lstbg},
+  frame=single,
+  rulecolor=\color{gray!40},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  xleftmargin=2em,
+  framexleftmargin=1.5em,
+  breaklines=true,
+  postbreak=\mbox{\textcolor{gray}{$\hookrightarrow$}\space},
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  upquote=true,
+  tabsize=2,
+  captionpos=b,
+  extendedchars=true,
+  literate={ä}{{\"a}}1 {ö}{{\"o}}1 {ü}{{\"u}}1 {Ä}{{\"A}}1 {Ö}{{\"O}}1
+           {Ü}{{\"U}}1 {ß}{{\ss}}1 {é}{{\'e}}1 {è}{{\`e}}1 {á}{{\'a}}1
+}
+\lstset{style=thesis}
+ 
+\lstdefinelanguage{SPARQL}{
+  sensitive=false,
+  alsoletter={?,\$},
+  morekeywords={PREFIX,BASE,SELECT,CONSTRUCT,ASK,DESCRIBE,WHERE,FROM,NAMED,
+    OPTIONAL,FILTER,UNION,MINUS,GRAPH,BIND,VALUES,SERVICE,DISTINCT,REDUCED,
+    AS,ORDER,BY,ASC,DESC,LIMIT,OFFSET,GROUP,HAVING,COUNT,SUM,MIN,MAX,AVG,
+    SAMPLE,GROUP_CONCAT,SEPARATOR,EXISTS,NOT,IN,a,STR,LANG,DATATYPE,BOUND,
+    IRI,URI,BNODE,CONCAT,STRLEN,UCASE,LCASE,CONTAINS,STRSTARTS,STRENDS,
+    REGEX,REPLACE,ENCODE_FOR_URI,ISIRI,ISBLANK,ISLITERAL,COALESCE,IF,
+    INSERT,DELETE,DATA,WITH,USING},
+  morecomment=[l]{\#},
+  morestring=[b]",
+  morestring=[b]',
+  moredelim=[s][\color{lstiri}]{<http}{>},
+  moredelim=[s][\color{lstiri}]{<urn}{>},
+}
+ 
+\lstdefinelanguage{Turtle}{
+  sensitive=true,
+  alsoletter={@},
+  morekeywords={@prefix,@base,PREFIX,BASE,a,true,false},
+  morecomment=[l]{\#},
+  morestring=[b]",
+  moredelim=[s][\color{lstiri}]{<http}{>},
+  moredelim=[s][\color{lstiri}]{<urn}{>},
+}
+ 
+% for code listings -- ends 
 
 % Colors from Corporate Design Uni Freiburg
 

@@ -1,0 +1,460 @@
+\section{Evaluation}\label{sec:experiments}
+
+In this chapter, we evaluate our proposed approach against the baseline. We first describe the datasets, then the experimental and evaluationsetup, and finally report the results.
+
+% Section~\ref{sec:datasets} describes the eight datasets and how we converted each of them into a generic KG\@. Section~\ref{sec:setup} describes the experimental configurations and the three levels at which we evaluate their output. Section~\ref{sec:results} reports the results.
+
+%-----------------------------------------------------------------------
+\subsection{Datasets}\label{sec:datasets}
+
+We evaluate on eight relational datasets. Five come from the BIRD benchmark \citep{li2023bird}, and three are public datasets of varying schema sizes: IMDb, Mondial, and MusicBrainz.
+% TODO: add bib entries li2023bird (BIRD), may1999mondial (Mondial), imdbdatasets (IMDb non-commercial datasets), swartz2002musicbrainz (MusicBrainz).
+They were chosen to cover a range of domains and of schema sizes, from three tables to 239. Table~\ref{tab:datasets} gives an overview.
+
+\begin{table}[!htbp]
+  \centering
+  \footnotesize
+  \renewcommand{\arraystretch}{1.3}
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabular}{l l r r r r c}
+    \hline
+    \textbf{Dataset} & \textbf{Format} & \textbf{Tables} & \textbf{Columns} & \textbf{Rows} & \textbf{FKs} & \textbf{CQs} \\
+    \hline
+    IMDb                  & TSV                  & 7   & 39      & 207.4\,M   & 7\(^{\ddagger}\) & -- \\
+    Mondial               & SQLite\(^{\dagger}\) & 47  & 192     & 56{,}702   & 74  & -- \\
+    MusicBrainz           & TSV + DDL            & 239 & 1{,}588 & 25.1\,M    & 473 & -- \\
+    \hline
+    superhero             & SQLite               & 10  & 31      & 10{,}614   & 11  & 16 \\
+    california\_schools   & SQLite               & 3   & 89      & 29{,}941   & 2   & 9 \\
+    formula\_1            & SQLite               & 13  & 94      & 493{,}257  & 19  & 20 \\
+    card\_games           & SQLite               & 6   & 115     & 803{,}445  & 4   & 16 \\
+    european\_football\_2 & SQLite               & 7   & 199     & 222{,}796  & 31  & 16 \\
+    \hline
+  \end{tabular}
+  \caption[Overview of the datasets]{Overview of the datasets. \emph{FKs} counts declared foreign keys. \emph{CQs} gives the number of competency questions given to the agents, out of all questions of BIRD mini-dev for that database. \(^{\dagger}\)~converted from PostgreSQL. \(^{\ddagger}\)~declared by us using the schema documentation.}
+  \label{tab:datasets}
+\end{table}
+
+% \paragraph{Generic KGs:}
+% Both agents explore the same generic KG \(G_D\) of each dataset: the GRASP agent through a QLever endpoint, the baseline as an N-Triples file. Except for superhero, which is small enough to be converted in full, \(G_D\) is a sample produced with the reservoir sampling and foreign-key repair of Section~\ref{sec:approach-generic}. The sample sizes in Table~\ref{tab:datasets} differ between datasets because the sampling parameters were set per dataset, and because foreign-key repair adds the parent rows that a sample references: in card\_games, for example, 50 rows are sampled from each large table, but the repaired \texttt{cards} table holds 200 rows. A set of CONSTRUCT queries written on a sample can be executed on the generic KG of the complete data, which we use in Section~\ref{sec:results-imdb}.
+% TODO: state the exact --sample-threshold / --sample-size / --fk-cap / --seed per dataset; they are not recorded next to the .nt files.
+% NOTE: approach.tex states a default fk-cap of 1200, while sampling.py has default=500. One of the two needs updating.
+
+%-----------------------------------------------------------------------
+\subsubsection{BIRD Databases}
+
+BIRD \citep{li2023bird} is a text-to-SQL benchmark of 95 SQLite databases from 37 professional domains. Each database comes with natural-language questions, each paired with a gold SQL query, a hint (called \emph{evidence}) that explains the domain knowledge the question needs, and a difficulty rating of \emph{simple}, \emph{moderate}, or \emph{challenging}. We use its curated subset mini-dev, which contains 11 databases, and from these we select five: superhero, card\_games, formula\_1, european\_football\_2, and california\_schools.
+% TODO: one sentence on why these five of the eleven.
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{superhero} describes 750 superheroes with their publisher, race, gender, alignment, eye, hair, and skin colors, and two many-to-many tables that link heroes to superpowers and to attribute values. It is the smallest database, and the only one in which two tables (\texttt{hero\_power}, \texttt{hero\_attribute}) have no primary key, so their rows are identified by position (\texttt{\_row}\(N\)).
+  \item \textbf{card\_games} describes the cards of the trading card game \emph{Magic: The Gathering}. The table \texttt{cards} has 74 columns, and several of them hold lists in a single string, such as the sets in which a card was printed. All four foreign keys reference a non-key column (\texttt{cards.uuid}, \texttt{sets.code}).
+  \item \textbf{formula\_1} describes Formula~1 seasons, races, circuits, drivers, and constructors, with results, qualifying, lap times, pit stops, and championship standings. It has the most tables among the BIRD databases (13), the most foreign keys (19), and two tables with a composite primary key.
+  \item \textbf{european\_football\_2} describes European football leagues, teams, players, and matches, with yearly attribute snapshots of players and teams. Its table \texttt{Match} has 115 columns: 22 lineup slots (\texttt{home\_player\_1} to \texttt{away\_player\_11}) with their pitch coordinates, betting odds from ten bookmakers, and eight columns (e.g.\ \texttt{goal}, \texttt{card}, \texttt{corner}) whose values are XML documents listing the events of the match. 28 of its 31 foreign keys reference unique columns such as \texttt{player\_api\_id} instead of the primary key.
+  \item \textbf{california\_schools} describes Californian schools, with their free and reduced-price meal statistics and SAT results. It has only three tables, but they are wide (49, 29, and 11 columns), with column names such as \texttt{Percent (\%) Eligible Free (K-12)}. Some rows of \texttt{schools} and \texttt{satscores} describe a district, not a school.
+\end{itemize}
+
+\paragraph{Competency questions:}
+The questions provided by BIRD-SQL for each database are written by domain annotators, they ask what a user of the data would want to know, and, since each comes with a gold SQL query, they have a known answer on \(D\). Since only the BIRD databases come with such questions, they are the datasets used in our ablation study: each is modeled with and without competency questions, by both our approach and the baseline. 
+
+For each of the five databases, we split its mini-dev questions into a \emph{guidance set} of about 30\%, stratified by difficulty, and a \emph{held-out set} of the rest. Only the guidance set is given to the agents as competency questions (Table~\ref{tab:datasets}, column \emph{CQs}). We give the agents the question text only, without the evidence and the SQL query. The held-out questions are reserved for checking whether the produced KGs can answer questions that did not influence the modeling.
+% TODO: confirm that only the question text (not evidence/SQL) was passed to the agents.
+% TODO: add the name of the split script (src/utils/split_cqs.py?) if you want to reference it.
+
+
+\paragraph{Dataset-specific handling:}
+The BIRD databases are SQLite files, which our converter converts directly. Primary keys, column types, and foreign keys are read from SQLite's \texttt{PRAGMA} metadata, so no further schema is needed. Beyond the general practices of Section~\ref{sec:approach-generic}, there is one edge case in the BIRD databases that the converter handles:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Foreign keys to non-key columns.} The edge of a foreign key points to the IRI of the referenced row, and that IRI is minted from the primary key. When a foreign key references another unique column, as in card\_games and european\_football\_2, the converter first builds a lookup from the referenced value to the primary key of its row, and uses it to resolve each reference. If a value names more than one row, no edge is emitted and the literal is kept. For the same reason, foreign-key repair during sampling looks rows up by the referenced column, not by the primary key; with a primary-key lookup, it would repair almost no references in european\_football\_2.
+%   \item \textbf{Composite foreign keys.} A composite foreign key is reported by \texttt{PRAGMA} as one row per column. The converter groups these rows, so that the foreign key yields one edge to a single row, and accepts it only if it references exactly the primary key of the target table.
+%   \item \textbf{Placeholder values.} Some databases encode ``unknown'' as a regular value. In superhero, for example, the race with id 1 is \texttt{-}, a gender is \texttt{N/A}, and unknown heights and weights are \texttt{0}. Following our null handling, these remain ordinary values in \(G_D\): deciding that they mean ``unknown'' is a modeling decision, which we leave to the agent.
+\end{itemize}
+
+%-----------------------------------------------------------------------
+\subsubsection{Mondial}
+
+Mondial \citep{may-MONDIAL-report-99} is a geographical database compiled from the CIA World Factbook and other sources. It describes countries, provinces, cities, organizations, and geographical features such as rivers, lakes, mountains, islands, and deserts, and the relations between them, for example which river flows through which province, or which country is a member of which organization. With 47 tables, 74 foreign keys, and 30 tables with a composite primary key (a province, for example, is identified by its name together with its country), it is the most densely connected relational schema in our evaluation.
+
+Mondial is distributed as PostgreSQL scripts. We convert it into SQLite first and then use our converter script. There are four specific cases that the converter handles separately for this dataset:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Composite column type.} Coordinates use a PostgreSQL composite type, \texttt{GeoCoord(Latitude, Longitude)}, which SQLite does not have. Each such column is split into two columns, and the tuple literals of the data are split accordingly; \texttt{CHECK} constraints on the composite are rewritten onto the new columns.
+  \item \textbf{Missing foreign keys.} The DDL declares no foreign keys at all. Mondial documents its referential dependencies in a separate PDF\@. We transcribed them into the converter, which adds them as foreign-key constraints and verifies the finished database with \texttt{PRAGMA foreign\_key\_check}. Of the 74 foreign keys, 21 are composite.
+  \item \textbf{Encoding errors.} Parts of the data are UTF-8 text that was once decoded as Windows-1252 and re-encoded, such as \texttt{ÃŽle-de-France} for \texttt{Île-de-France}. These are repaired line by line before loading.
+  \item \textbf{Tables without a primary key.} Two tables, \texttt{located} and \texttt{islandIn}, have no primary key, and their rows are identified by position.
+\end{itemize}
+Mondial has no competency questions with gold answers, so it is modeled without CQs only.
+
+%-----------------------------------------------------------------------
+\subsubsection{IMDb}
+
+The IMDb non-commercial datasets \citep{imdbdatasets} describe movies, series, episodes, and the people involved in them. They consist of seven tab-separated files, one per table: \texttt{title.basics}, \texttt{title.akas} (alternative titles per region and language), \texttt{title.crew}, \texttt{title.episode}, \texttt{title.principals} (the credits of a person on a title), \texttt{title.ratings}, and \texttt{name.basics}. With 207.4 million rows, IMDb is by far the largest dataset in our evaluation, although its schema is small.
+
+IMDb is converted with \texttt{tsv2rdf.py}, which handles three properties of the data:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{No schema.} The files contain only a header row, without types, primary keys, or foreign keys. Without a schema, every row would be identified by its position and the graph would contain no edges between rows. We therefore declare the primary keys (e.g.\ \texttt{tconst} for \texttt{title.basics}, and the composite key \texttt{(titleId, ordering)} for \texttt{title.akas}) and seven foreign keys inline when calling the converter. For the same reason, no literal of the IMDb generic KG is typed.
+  \item \textbf{Null marker.} Since TSV cannot represent NULL, IMDb writes missing values as \texttt{\textbackslash N}, which we declare as a null marker.
+  \item \textbf{Multi-valued cells.} Columns such as \texttt{genres}, \texttt{primaryProfession}, and \texttt{knownForTitles} hold comma-separated lists, which are split into one literal per value with the sub-delimiter option. Lists of identifiers (\texttt{knownForTitles}, \texttt{directors}, \texttt{writers}) are split like any other column, but not linked to the rows they name. The columns \texttt{types} and \texttt{attributes} of \texttt{title.akas} separate their values with the control character \texttt{0x02} instead, which we did not split.
+\end{itemize}
+% TODO: confirm the exact sub-delimiter call (columns list) used for imdb_sampled.nt.
+The sample explored by the agents takes 100 rows from each table, plus the 600 titles and 100 persons that the sampled rows reference, which results in 1{,}400 rows and 10{,}421 triples.
+
+\paragraph{Evaluation graph:}
+On this sample, the analytical questions of Section~\ref{sec:results-imdb} all have empty answers: no title of a sampled credit has a rating, no director has a person row, and the highest number of votes is 5{,}368. Uniform per-table sampling cannot produce connected data, since foreign-key repair only adds the parents of sampled rows, not their children. For the evaluation, we therefore built a second, connected generic KG from the complete data, \(G_D^{\mathit{pop}}\), in exactly the layout of \(G_D\): all 3{,}092 titles with at least 100{,}000 votes, with their ratings, crew, 66{,}452 credits, 173{,}143 alternative titles, and 29{,}701 episodes, and all 32{,}198 credited persons. It has 2{,}505{,}248 triples and no dangling references. The agents never saw this graph. We only execute their queries on it, which is possible since the queries were written for the same layout.
+
+%-----------------------------------------------------------------------
+\subsubsection{MusicBrainz}
+
+MusicBrainz \citep{swartz2002musicbrainz} is an open encyclopedia of music metadata: artists, releases, recordings, works, labels, places, and events, and a generic relationship model that connects any two of them, as well as the edit history of its community of editors. We use the official sample dump, restricted to 239 tables, which is the largest schema in our evaluation by an order of magnitude: 1{,}588 columns and 473 foreign-key columns.
+% TODO: one sentence on what filtered.sql removes from CreateTables.sql and why.
+
+The dump consists of extensionless, tab-separated PostgreSQL \texttt{COPY} files without a header; the schema is shipped separately as SQL DDL\@. We first add a header row to each file from the DDL, and then convert the files with \texttt{mb2rdf.py}, which reads the schema directly from the DDL\@. MusicBrainz declares its keys and references not as SQL constraints, but in column comments (\texttt{-{}- PK}, \texttt{-{}- references artist.id}), so these comments are the authoritative source. Parsing them required handling several details:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Composite primary keys.} Every column marked as \texttt{PK} belongs to the key, not only the first one. 67 tables have a composite key, for example \texttt{(recording, tag)} for \texttt{recording\_tag}. Keeping only the first column would merge all rows that share it into one node, which in the dump collapsed about 4.0 million rows into 1.1 million.
+  \item \textbf{Implicit primary keys.} MusicBrainz ships no separate primary-key definitions, and 114 of the 239 tables declare their key only through a \texttt{SERIAL} column. We infer the key from that column type; without this, every reference to these tables would be dangling. Tables with neither marker get no key.
+  \item \textbf{DDL layout.} \texttt{CREATE TABLE} statements open their parenthesis either on the same line or on the next, and multi-line \texttt{CHECK} constraints have continuation lines that look like column definitions. Matching only the first form silently dropped 25 tables; the continuation lines produced columns that do not exist.
+  \item \textbf{Schema-qualified names.} The Cover Art Archive tables are dumped as \texttt{cover\_art\_archive.art\_type}, but referenced as \texttt{art\_type}. The schema qualifier is removed, otherwise these files would receive no schema and all 112{,}142 references into them would be lost.
+  \item \textbf{References to absent tables.} The DDL declares tables that the dump does not contain. References to them are dropped, since they could never be resolved.
+\end{itemize}
+The sample contains 312{,}695 rows of all 239 tables, with 2{,}683{,}108 triples, of which 591{,}333 are edges between rows. It is the only generic KG in our evaluation that cannot be inspected by reading its triples. Like Mondial and IMDb, MusicBrainz is modeled without CQs.
+
+%-----------------------------------------------------------------------
+\subsection{Setup}\label{sec:setup}
+
+\paragraph{Configurations:}
+We compare four configurations: our approach (GRASP) and the baseline (Section~\ref{sec:approach-baseline}), each with and without competency questions. On the BIRD databases, we run all four. On Mondial, IMDb, and MusicBrainz, which have no competency questions, we run the two configurations without CQs. For MusicBrainz, the baseline did not produce a result: OpenCode repeatedly stalled while exploring the 2.7-million-triple file and never wrote its queries. Table~\ref{tab:runs} lists the 25 runs that we evaluate, with the run identifiers used in our experiment logs.
+% TODO: say how often OpenCode was retried on MusicBrainz, and whether it stalled or hit a limit.
+
+\begin{table}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{l c c c c}
+    \hline
+    \textbf{Dataset} & \textbf{Baseline} & \textbf{Baseline + CQ} & \textbf{GRASP} & \textbf{GRASP + CQ} \\
+    \hline
+    superhero             & B6 & B7 & G19 & G20 \\
+    card\_games           & B3 & B4 & G7  & G8  \\
+    formula\_1            & B1 & B2 & G1  & G2  \\
+    european\_football\_2 & B5 & B6 & G3  & G2  \\
+    california\_schools   & B3 & B4 & G6  & G8  \\
+    Mondial               & B5 & -- & G5  & --  \\
+    IMDb                  & B2 & -- & G7  & --  \\
+    MusicBrainz           & (failed) & -- & G8 & -- \\
+    \hline
+  \end{tabular}
+  \caption{Evaluated runs. Identifiers are the run numbers of our experiment logs and are only unique within a dataset.}
+  \label{tab:runs}
+\end{table}
+
+All runs use the same LLM, DeepSeek~v4.1~Flash, for both the generation and the review agent of GRASP and for the baseline. Each configuration was run once per dataset; we discuss the consequences of single runs in Section~\ref{sec:results-judge}. The generic KGs are served by QLever~0.6.0.
+% TODO: add max review rounds, temperature, token limits, and the dates of the runs; and whether earlier runs (e.g. superhero G1-G18) were development runs used to tune the prompts.
+
+We evaluate the output of every run on three levels, which correspond to the criteria of Section~\ref{sec:problem-statement}: whether the queries execute at all, how well they model the data, and how usable the result is.
+
+\paragraph{Syntactic validity:}
+The first level is whether \(Q\) can be executed on \(G_D\) and yields a valid graph. We send each CONSTRUCT query of a run to the QLever endpoint of its generic KG, request N-Triples, and write the union of the results into one file, which is the output KG \(G\). We count a run as valid if every query executes and the result parses as N-Triples. We record which queries needed intervention before they could be materialized, and of what kind.
+
+\paragraph{LLM-as-a-judge:}
+The second level is the quality of the semantic modeling and the fidelity of \(G\). Since we do not prescribe a target ontology, there is no reference graph against which \(G\) could be compared triple by triple (Section~\ref{sec:rw-eval}). Instead, we assess the queries the way a knowledge engineer would review them, and let an LLM agent do this review, following the LLM-as-a-judge paradigm \citep{zheng2023judging}.
+% TODO: add bib entry zheng2023judging.
+
+The judge receives the generic KG \(G_D\) (as a QLever endpoint and as a file), the queries \(Q\), and the output KG \(G\). It is asked to first explore \(G_D\) and form its own view of how the data should be modeled, then read \(Q\) in full, and then review \(Q\) against nine criteria, which make the criteria of Section~\ref{sec:problem-statement} concrete:
+\begin{enumerate}[label=\textbf{C\arabic*.}, leftmargin=*, itemsep=2pt]
+  \item \textbf{Entity and class modeling:} the right real-world things become entities, at the right granularity.
+  \item \textbf{Vocabulary:} classes and predicates denote domain concepts rather than source names; each predicate has one precise meaning and a natural direction.
+  \item \textbf{IRI design:} entity IRIs are minted from stable identifiers, in a domain namespace, with proper encoding.
+  \item \textbf{Relationships:} the relationships of \(D\) are links between entities, without \(G\) being a replica of the source schema.
+  \item \textbf{Self description:} every entity has an \texttt{rdf:type}, and entities with a natural name have an \texttt{rdfs:label}.
+  \item \textbf{Schema coverage:} the information of every field of \(D\) reaches \(G\).
+  \item \textbf{Soundness:} \(Q\) produces only content that \(D\) supports.
+  \item \textbf{IRI consistency:} the same entity gets the same IRI wherever it is minted or referenced.
+  \item \textbf{Literal typing:} literals carry datatypes that match their values.
+\end{enumerate}
+C1 to C4 correspond to the semantic-modeling criteria of Section~\ref{sec:problem-statement}, and C6 to C9 to the fidelity criteria, with C8 covering structural integrity. C5 is added because types and labels are what makes a graph navigable for a human or an LLM\@. Answerability is not judged here, but evaluated with queries (see below). The criteria tell the judge what to judge, not what to look for: the examples listed under each criterion are explicitly described as a starting point, not as a checklist.
+
+Three ground rules keep the review grounded in the data. First, every reported issue needs evidence, either a quoted fragment of \(Q\) or a query on \(G_D\) with its result; issues based on what the data ``probably'' contains are not allowed. Second, the judge may run read-only SELECT queries, but may not execute \(Q\) itself. Third, it may use \(G\) only to confirm or rule out a problem that it found in \(Q\), for example whether a cast actually lost values, but not to judge the size or completeness of \(G\) on its own. All queries are logged with a one-line summary of their result, so that every judgment can be traced.
+
+The judge assigns each issue a severity. An issue is \emph{major} if it loses or corrupts information, makes the graph misleading, or makes an important part of the domain wrong or hard to query; it is \emph{minor} if the information is still present and correct, but less clear, less consistent, or less convenient than it should be. Each severity decision must be justified in one sentence. Each criterion then receives one of five levels:
+\begin{table}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{c l}
+    \hline
+    \textbf{Level} & \textbf{Anchor} \\
+    \hline
+    1    & No issues. \\
+    0.75 & Only minor issues. \\
+    0.5  & One major issue, or minor issues so widespread that they affect most of the graph. \\
+    0.25 & Several major issues, but the criterion is still partly met. \\
+    0    & The criterion is essentially not met. \\
+    \hline
+  \end{tabular}
+  \caption{Levels of the judge per criterion.}
+  \label{tab:judge-levels}
+\end{table}
+
+The levels of the nine criteria are summed to a score out of 9, which we report scaled to 10. The judge writes its result as a JSON file, with the issues, their evidence and severity, and a rationale for each level, explaining why it chose this level and not a neighboring one. Problems that fit none of the criteria are reported separately and not scored.
+
+The judge is DeepSeek~v4.1~Flash, run as an OpenCode agent, with one judging run per output KG\@. The prompt is identical for all runs, except for a configuration block that names the inputs and describes the conventions of the generic KG\@. Since the judge is the same model that generated the queries, it may be biased towards its own modeling choices. However, this affects both approaches equally, since both use the same model.
+% TODO: keep or drop the bias sentence depending on how you discuss threats to validity.
+We take the levels from the judge, but compute the totals ourselves: in two of the 25 results (superhero G19 and G20), the sum reported by the judge did not match its own levels.
+
+\paragraph{Qualitative analysis:}
+The third level is a manual analysis of selected runs. We read the queries and compare the modeling decisions of the two approaches on the same data. To assess usability, we write SPARQL queries for questions over each output KG, check their answers against gold SQL queries on \(D\), and compare the queries by their number of triple patterns and their runtime. For the runtime measurements, each query is run five times on QLever after one warm-up run, with the result cache cleared before every run, and we report the median of QLever's total query time (computation and serialization). Since both graphs are served by the same QLever instance configuration and the queries use the same pattern order, differences in runtime reflect the modeling, for example an additional join, rather than the engine.
+
+%-----------------------------------------------------------------------
+\subsection{Results}\label{sec:results}
+
+\subsubsection{Syntactic Validity}\label{sec:results-syntax}
+
+All 25 runs that produced queries yield a valid output KG\@. For the GRASP runs, this holds by construction: every saved query has been executed on the QLever endpoint of \(G_D\) during generation, and only queries whose latest test succeeded can be submitted (Section~\ref{sec:approach-construct}). All thirteen GRASP query sets were therefore materialized on QLever without changes.
+
+The baseline cannot execute its queries on a SPARQL endpoint, and six of its twelve query sets did not run on QLever as written:
+% TODO: verify this list against your own notes; it is reconstructed from the output files and the experiment logs.
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Very wide queries.} The baseline tends to write one query per table, with one OPTIONAL per column. The queries for the widest tables, \texttt{cards} in card\_games (B3, B4) and \texttt{schools} in california\_schools (B3), contain up to 75 OPTIONALs in a single query. On these, QLever crashed with a stack overflow in its query planner, or did not finish within 600 seconds. GRASP never hit this problem, since a query that crashes the endpoint fails its test and has to be split by the agent.
+  \item \textbf{Predicates built at runtime.} The lineup queries of european\_football\_2 (B5, B6) compute their predicate with \texttt{BIND(IRI(CONCAT(\ldots)))} and use the variable in the predicate position, which QLever~0.6.0 rejects with an internal assertion.
+  \item \textbf{Unsupported functions.} The IMDb baseline (B2) types its years with the cast function \texttt{xsd:gYear()}, which the engines we tried do not support: rdflib evaluates it to unbound, so the year triples silently disappear, and Oxigraph rejects the query. We replaced the cast with the equivalent \texttt{STRDT(STR(?y), xsd:gYear)}.
+  \item \textbf{Unencoded IRIs.} The IMDb baseline mints IRIs from the values of \texttt{title.akas/types} without encoding them. Ten of these values contain the separator character \texttt{0x02} (Section~\ref{sec:datasets}), which is not allowed in an IRI\@. We percent-encoded these IRIs in the output.
+\end{itemize}
+We materialized the five query sets with the first two problems with Oxigraph instead of QLever, which executes them unchanged, and fixed the IMDb queries as described. None of these interventions changes the modeling of the queries, so the judge evaluates the queries as the baseline wrote them.
+% TODO: if you prefer the "manually fixed for QLever" framing, describe the edits here instead; the delivered construct.nt of card_games B3/B4, california_schools B3 and european_football_2 B5/B6 carry Oxigraph's xsd:integer, not QLever's xsd:int.
+
+Table~\ref{tab:output-sizes} gives the size of every output KG\@.
+\begin{table}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.3}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{l r r r r r}
+    \hline
+    \textbf{Dataset} & \(|G_D|\) & \textbf{Baseline} & \textbf{Baseline + CQ} & \textbf{GRASP} & \textbf{GRASP + CQ} \\
+    \hline
+    superhero             & 42{,}907    & 36{,}557 & 34{,}434 & 32{,}499 & 33{,}953 \\
+    card\_games           & 13{,}081    & 16{,}307 & 13{,}150 & 13{,}571 & 14{,}946 \\
+    formula\_1            & 46{,}755    & 52{,}363 & 52{,}363 & 53{,}219 & 50{,}532 \\
+    european\_football\_2 & 17{,}369    & 31{,}620 & 29{,}711 & 33{,}106 & 26{,}866 \\
+    california\_schools   & 7{,}677     & 8{,}342  & 8{,}096  & 9{,}945  & 9{,}561  \\
+    Mondial               & 26{,}629    & 21{,}976 & --       & 23{,}249 & --       \\
+    IMDb\(^{*}\)          & 2{,}505{,}248 & 2{,}780{,}662 & -- & 2{,}532{,}669 & -- \\
+    MusicBrainz           & 2{,}683{,}108 & --     & --       & 751{,}645 & --      \\
+    \hline
+  \end{tabular}
+  \caption[Sizes of the output KGs]{Number of triples of the generic KG and of each output KG\@. \(^{*}\)~on the evaluation graph \(G_D^{\mathit{pop}}\).}
+  \label{tab:output-sizes}
+\end{table}
+The size of an output KG relative to \(G_D\) says little about its quality: a graph can shrink because it drops the redundant literal copies of foreign keys, or grow because it reifies values into nodes with their own type and label. The one clear outlier is MusicBrainz, where the output has 28\% of the triples of \(G_D\), which already indicates that large parts of the schema are not covered (Section~\ref{sec:results-judge}).
+
+%-----------------------------------------------------------------------
+\subsubsection{Judge Scores}\label{sec:results-judge}
+
+Table~\ref{tab:judge-scores} shows the score of every run, and Table~\ref{tab:judge-criteria} the mean level of each criterion per configuration. The levels of all runs are listed in Table~\ref{tab:judge-all}.
+
+\begin{table}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabular}{l c c c c}
+    \hline
+    \textbf{Dataset} & \textbf{Baseline} & \textbf{Baseline + CQ} & \textbf{GRASP} & \textbf{GRASP + CQ} \\
+    \hline
+    superhero             & 8.9 (1) & \textbf{9.2} (0) & 8.9 (0) & 8.9 (0) \\
+    card\_games           & 7.2 (4) & 7.5 (3) & \textbf{7.8} (2) & 7.5 (2) \\
+    formula\_1            & 7.2 (4) & 8.3 (3) & \textbf{9.2} (0) & 8.9 (1) \\
+    european\_football\_2 & 7.8 (3) & 7.8 (3) & \textbf{8.6} (0) & 7.8 (2) \\
+    california\_schools   & 6.7 (4) & 7.5 (3) & 8.1 (1) & \textbf{8.3} (0) \\
+    \hline
+    Mean (BIRD)           & 7.6     & 8.1     & \textbf{8.5}     & 8.3 \\
+    \hline
+    Mondial               & 8.6 (2) & --      & \textbf{8.9} (1) & -- \\
+    IMDb                  & 8.6 (2) & --      & \textbf{9.2} (0) & -- \\
+    MusicBrainz           & --      & --      & 6.4 (6) & -- \\
+    \hline
+  \end{tabular}
+  \caption[Judge scores per run]{Judge score per run, out of 10, with the number of major issues in parentheses. The best score per dataset is in bold.}
+  \label{tab:judge-scores}
+\end{table}
+
+\begin{table}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.3}
+  \setlength{\tabcolsep}{4.5pt}
+  \begin{tabular}{l c c c c c c c c c c}
+    \hline
+    \textbf{Configuration} & \textbf{C1} & \textbf{C2} & \textbf{C3} & \textbf{C4} & \textbf{C5} & \textbf{C6} & \textbf{C7} & \textbf{C8} & \textbf{C9} & \textbf{Score} \\
+    \hline
+    Baseline       & 0.65 & 0.60 & 0.90 & 0.55 & 0.75 & 0.85 & 0.80 & 0.90 & 0.80 & 7.6 \\
+    Baseline + CQ  & 0.60 & 0.65 & 1.00 & 0.65 & 0.75 & 0.95 & 0.85 & 0.90 & 0.90 & 8.1 \\
+    GRASP          & 0.80 & 0.75 & 0.90 & 0.80 & 0.90 & 0.85 & 0.85 & 0.90 & 0.90 & 8.5 \\
+    GRASP + CQ     & 0.65 & 0.65 & 0.90 & 0.85 & 0.85 & 0.90 & 0.85 & 0.95 & 0.85 & 8.3 \\
+    \hline
+  \end{tabular}
+  \caption[Mean judge level per criterion]{Mean level per criterion over the five BIRD databases.}
+  \label{tab:judge-criteria}
+\end{table}
+
+\paragraph{GRASP versus baseline (RQ2):}
+Without competency questions, GRASP scores at least as high as the baseline on all seven datasets on which both produced a result, and higher on six of them; on superhero, both reach 8.9. The mean over the BIRD databases is 8.5 against 7.6, and the GRASP runs contain far fewer major issues: 3 against 16 on the BIRD databases, and 4 against 20 on all seven datasets. The difference is concentrated in the modeling criteria. Table~\ref{tab:judge-criteria} shows the largest gaps for relationships (C4: 0.80 against 0.55), entity and class modeling (C1: 0.80 against 0.65), vocabulary (C2: 0.75 against 0.60), and self description (C5: 0.90 against 0.75), while IRI design, coverage, and IRI consistency are on par. The judge thus finds that both approaches carry the data over equally completely, but GRASP models it better.
+
+The major issues of the baseline fall into recurring patterns:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Structure kept as literals.} In european\_football\_2, both baseline runs keep the eight XML event columns of \texttt{Match} as one string literal per match, so goals, cards, and fouls never become entities and are never linked to their players and teams. GRASP without CQs (G3) models them.
+  \item \textbf{Vocabulary repeating the source.} In formula\_1, most predicates of both baseline runs repeat the column names (\texttt{f1:driverRef}, \texttt{f1:qualifyId}), and a single predicate \texttt{f1:position} is used for the finishing position, the qualifying position, the championship position, and the position in a lap.
+  \item \textbf{Wrong entities.} In california\_schools, both baseline runs type the ten district-level rows of \texttt{schools} as \texttt{cs:School}, and additionally mint the same districts under a second IRI, which the judge counts as a major issue under C1, C4, C7, and C8. In Mondial, the baseline models each country-specific percentage of a religion as an entity of class \texttt{Religion}, so the same religion is split into one entity per country.
+  \item \textbf{Invented content and lost values.} In european\_football\_2, both baseline runs write the index of a lineup slot as \texttt{ef:shirtNumber}, although the source contains no shirt numbers. In card\_games (B3), an invalid boolean cast silently drops three fields of 17 cards, and in Mondial, years are typed as \texttt{xsd:gYear} with the lexical form \texttt{1996.0}, which is not a valid year.
+\end{itemize}
+Some problems are shared by both approaches and point to the dataset rather than to the approach. In card\_games, all four runs model each printing of a card as \texttt{mtg:Card} and never introduce the abstract card that the printings share, so the list of sets in which a card was printed is attached to every printing. This is the main reason why card\_games has the lowest scores of the BIRD databases for both approaches.
+
+The GRASP runs have few major issues, but they are of a different kind. In california\_schools (G6), addresses and administrators are minted as blank nodes, which are not stable across executions. In Mondial (G5), entities that are only created as link targets, such as 261 provinces, never receive a type.
+
+\paragraph{Effect of competency questions (RQ3):}
+Competency questions affect the two approaches in opposite directions. For the baseline, adding CQs never lowers the score: it improves it on four of the five databases (by up to 1.1 points on formula\_1) and leaves european\_football\_2 unchanged, and the mean rises from 7.6 to 8.1. For GRASP, adding CQs lowers the score on three databases, leaves superhero unchanged, and improves only california\_schools; the mean drops from 8.5 to 8.3. With CQs, the two approaches are close: GRASP is ahead on formula\_1 and california\_schools, the baseline on superhero, and they are tied on card\_games and european\_football\_2.
+
+The criteria show where this comes from. For GRASP, the CQs lower entity modeling (C1: 0.80 to 0.65) and vocabulary (C2: 0.75 to 0.65). The clearest example is european\_football\_2: with CQs (G2), only two of the eight event columns become events, while the other six remain XML literals, and the event predicates \texttt{ef:player1} and \texttt{ef:player2} keep the positional source names, although their meaning changes with the type of event. We interpret this as the agent narrowing its model towards what the questions ask, despite the instruction that the questions are a minimum, not the scope of the model. For the baseline, CQs mainly improve coverage (C6: 0.85 to 0.95) and literal typing (C9: 0.80 to 0.90), that is, the questions point the agent to fields and value types that it would otherwise have missed, but they do not improve its modeling of entities.
+% TODO: tie this to the held-out CQ answerability results if you add them.
+
+\paragraph{Schema size and complexity (RQ4):}
+MusicBrainz, with 239 tables, has the lowest score of all runs (6.4), with six major issues: four of them concern missing or broken relationships. The relationship query emits a relationship as soon as one of its two endpoints resolves, so only 2{,}723 of 31{,}308 relationships in \(G\) have both endpoints; edits are never linked to the entities they edit; and of the nine collection-membership tables, only one is read. The vocabulary is also weaker: the endpoints of every relationship are named \texttt{mbo:entity0} and \texttt{mbo:entity1}, and one predicate \texttt{mbo:type} carries ten different meanings. Among the other datasets, the score does not simply follow the number of tables: Mondial, with 47 tables and the densest foreign-key structure, scores 8.9, while card\_games, with six tables, scores lowest among the BIRD databases. What makes a dataset hard is not the number of tables as such, but how far its domain is from its schema, as with the printing/card distinction in card\_games or the events hidden in XML in european\_football\_2, and, for MusicBrainz, the sheer number of tables that have to be covered in one coherent model.
+
+\paragraph{Limitations:}
+Each configuration was run once, and each output was judged once. A difference of one level on one criterion changes the score by 0.28 points, so differences of this size between two single runs should not be over-interpreted. The consistent patterns, the GRASP lead on all seven datasets without CQs, and the opposite effect of CQs on the two approaches, are more robust than any individual difference.
+
+\begin{table}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{l l c c c c c c c c c c}
+    \hline
+    \textbf{Dataset} & \textbf{Run} & \textbf{C1} & \textbf{C2} & \textbf{C3} & \textbf{C4} & \textbf{C5} & \textbf{C6} & \textbf{C7} & \textbf{C8} & \textbf{C9} & \textbf{Score} \\
+    \hline
+    superhero  & B6          & 0.5  & 0.75 & 1    & 0.75 & 1    & 1    & 1    & 1    & 1    & 8.9 \\
+               & B7 (CQ)     & 0.75 & 1    & 1    & 0.75 & 1    & 0.75 & 1    & 1    & 1    & 9.2 \\
+               & G19         & 1    & 0.75 & 1    & 1    & 0.75 & 0.75 & 0.75 & 1    & 1    & 8.9 \\
+               & G20 (CQ)    & 0.75 & 0.75 & 1    & 1    & 0.75 & 1    & 0.75 & 1    & 1    & 8.9 \\
+    \hline
+    card\_games & B3         & 0.75 & 0.5  & 1    & 0.5  & 0.75 & 0.5  & 1    & 1    & 0.5  & 7.2 \\
+               & B4 (CQ)     & 0.5  & 0.5  & 1    & 0.5  & 0.75 & 1    & 1    & 1    & 0.5  & 7.5 \\
+               & G7          & 0.5  & 0.75 & 1    & 0.5  & 1    & 0.75 & 0.75 & 1    & 0.75 & 7.8 \\
+               & G8 (CQ)     & 0.5  & 0.75 & 1    & 0.5  & 0.75 & 1    & 0.75 & 1    & 0.5  & 7.5 \\
+    \hline
+    formula\_1 & B1          & 1    & 0.25 & 0.75 & 0.5  & 0.5  & 1    & 1    & 1    & 0.5  & 7.2 \\
+               & B2 (CQ)     & 0.75 & 0.25 & 1    & 1    & 0.5  & 1    & 1    & 1    & 1    & 8.3 \\
+               & G1          & 1    & 0.75 & 1    & 0.75 & 1    & 1    & 1    & 1    & 0.75 & 9.2 \\
+               & G2 (CQ)     & 0.75 & 0.5  & 1    & 1    & 1    & 1    & 1    & 1    & 0.75 & 8.9 \\
+    \hline
+    european\_  & B5         & 0.5  & 0.75 & 1    & 0.5  & 0.75 & 1    & 0.5  & 1    & 1    & 7.8 \\
+    football\_2 & B6 (CQ)    & 0.5  & 0.75 & 1    & 0.5  & 0.75 & 1    & 0.5  & 1    & 1    & 7.8 \\
+               & G3          & 0.75 & 0.75 & 1    & 0.75 & 1    & 0.75 & 0.75 & 1    & 1    & 8.6 \\
+               & G2 (CQ)     & 0.5  & 0.5  & 0.75 & 0.75 & 0.75 & 0.75 & 1    & 1    & 1    & 7.8 \\
+    \hline
+    california\_ & B3        & 0.5  & 0.75 & 0.75 & 0.5  & 0.75 & 0.75 & 0.5  & 0.5  & 1    & 6.7 \\
+    schools    & B4 (CQ)     & 0.5  & 0.75 & 1    & 0.5  & 0.75 & 1    & 0.75 & 0.5  & 1    & 7.5 \\
+               & G6          & 0.75 & 0.75 & 0.5  & 1    & 0.75 & 1    & 1    & 0.5  & 1    & 8.1 \\
+               & G8 (CQ)     & 0.75 & 0.75 & 0.75 & 1    & 1    & 0.75 & 0.75 & 0.75 & 1    & 8.3 \\
+    \hline
+    Mondial    & B5          & 0.5  & 0.75 & 1    & 1    & 1    & 1    & 1    & 1    & 0.5  & 8.6 \\
+               & G5          & 1    & 0.75 & 0.75 & 1    & 0.5  & 1    & 1    & 1    & 1    & 8.9 \\
+    \hline
+    IMDb       & B2          & 0.5  & 0.5  & 1    & 1    & 0.75 & 1    & 1    & 1    & 1    & 8.6 \\
+               & G7          & 0.75 & 0.75 & 1    & 1    & 0.75 & 1    & 1    & 1    & 1    & 9.2 \\
+    \hline
+    MusicBrainz & G8         & 0.75 & 0.25 & 0.75 & 0.25 & 0.75 & 0.5  & 0.75 & 1    & 0.75 & 6.4 \\
+    \hline
+  \end{tabular}
+  \caption[Judge levels of all runs]{Judge levels of all runs per criterion, and the score out of 10.}
+  \label{tab:judge-all}
+\end{table}
+
+%-----------------------------------------------------------------------
+\subsubsection{Qualitative Analysis}\label{sec:results-qualitative}
+
+\paragraph{IMDb}\label{sec:results-imdb}
+The two IMDb output KGs, B2 (baseline) and G7 (GRASP), model the same entities: titles, persons, credits, episodes, and alternative titles. Both type each title with a class per title type, link credits to their title and person, link episodes to their series, and label every entity. The judge scores them 8.6 and 9.2; the two major issues of B2 concern its \texttt{Role} entities, which are built from the credit category (\texttt{actor}, \texttt{director}, \ldots), not from the role that is played. The differences that matter for querying are listed in Table~\ref{tab:imdb-diff}.
+
+\begin{table}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.4}
+  \begin{tabular}{p{2.3cm} p{6.0cm} p{5.0cm}}
+    \hline
+    & \textbf{B2 (baseline)} & \textbf{G7 (GRASP)} \\
+    \hline
+    Rating        & separate node: \texttt{?t imdb:hasRating ?r . ?r imdb:numVotes ?v} & on the title: \texttt{?t imdb:numVotes ?v} \\
+    Genre         & node: \texttt{?t imdb:hasGenre ?g . ?g rdfs:label ?genre} & literal: \texttt{?t imdb:genre ?genre} \\
+    Credit category & node: \texttt{?c imdb:role role:actor} & literal: \texttt{?c imdb:category "actor"} \\
+    Years         & \texttt{xsd:gYear} & \texttt{xsd:integer} \\
+    Namespace     & \texttt{http://example.org/imdb/} & \texttt{http://imdb.org/} \\
+    \hline
+  \end{tabular}
+  \caption{Modeling differences between the IMDb output KGs that affect querying.}
+  \label{tab:imdb-diff}
+\end{table}
+
+To compare their usability, we wrote nine analytical questions, each as one SPARQL query per graph, and executed them on the output KGs of the evaluation graph \(G_D^{\mathit{pop}}\) (Section~\ref{sec:datasets}). The two queries of a question differ only where the vocabulary of the graphs differs, and they use the same pattern order. All 18 queries return the same answer as the gold SQL query on the same data. Table~\ref{tab:imdb-queries} shows the number of triple patterns of each query and its median runtime on QLever.
+% TODO: the gold-SQL check was done on the Oxigraph 1.25M-triple subset (without akas); confirm or re-run it on imdb_popular.nt.
+% NOTE: questions are renumbered Q1-Q9; in cases.yaml / runtimes.json they are 1-4 and 6-10.
+
+\begin{table}[!htbp]
+  \centering
+  \small
+  \renewcommand{\arraystretch}{1.3}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{c p{6.2cm} r r r r r}
+    \hline
+    & & \multicolumn{2}{c}{\textbf{Triple patterns}} & \multicolumn{2}{c}{\textbf{Median time (ms)}} & \\
+    \textbf{\#} & \textbf{Question} & \textbf{B2} & \textbf{G7} & \textbf{B2} & \textbf{G7} & \textbf{Speed-up} \\
+    \hline
+    Q1 & All genres, with their frequency and average rating        & 4  & 2  & 24  & 12  & 2.00 \\
+    Q2 & Persons with the most votes on average (at least 3 movies) & 6  & 5  & 38  & 35  & 1.09 \\
+    Q3 & Persons known for \(\geq 3\) movies with \(\geq 1\)M votes  & 5  & 4  & 14  & 12  & 1.17 \\
+    Q4 & Oldest directors at the time of the movie                  & 5\(^{*}\) & 5  & 14  & 13  & 1.08 \\
+    Q5 & Series with \(\geq 1\)M votes, by number of episodes        & 5  & 4  & 17  & 13  & 1.31 \\
+    Q6 & Oldest actors in movies with \(\geq 100\)K votes          & 9\(^{*}\) & 8  & 131 & 77  & 1.70 \\
+    Q7 & Highest-rated movie (\(\geq 100\)K votes) per director, top 10 & 12 & 10 & 95 & 47 & 2.02 \\
+    Q8 & Youngest directors with a movie over 1M votes              & 7\(^{*}\) & 6  & 22  & 17  & 1.29 \\
+    Q9 & Movies whose title contains ``star'' and ``war''           & 2  & 2  & 11  & 11  & 1.00 \\
+    \hline
+       & \textbf{Total}                                              & \textbf{55} & \textbf{46} & \textbf{366} & \textbf{237} & \textbf{1.54} \\
+    \hline
+  \end{tabular}
+  \caption[Analytical queries on the IMDb output KGs]{Analytical queries on the two IMDb output KGs: number of triple patterns and median of five cold-cache runs on QLever. \(^{*}\)~additionally needs two casts.}
+  \label{tab:imdb-queries}
+\end{table}
+
+G7 needs fewer or equally many triple patterns on every question, 46 against 55 in total, and its queries are faster or equally fast on every question, 237\,ms against 366\,ms in total. Both effects trace back to two modeling decisions.
+
+\subparagraph{Folding the ratings into the title.}
+In \(D\), \texttt{title.ratings} is in a one-to-one relationship with \texttt{title.basics}, and holds only the average rating and the number of votes. B2 keeps it as a separate \texttt{Rating} node, G7 attaches both values to the title. Every question that filters, groups, or ranks by votes or rating therefore needs one more join in B2, which applies to seven of the nine questions. In Q7, which looks up the rating twice, once to find the maximum per director and once to find the movie with that maximum, B2 pays this join twice and takes twice as long:
+\begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
+# G7
+?m a imdb:Movie ; imdb:director ?d ; imdb:averageRating ?r ; imdb:numVotes ?v .
+# B2
+?m a tt:movie ; imdb:director ?d ; imdb:hasRating ?rt .
+?rt imdb:averageRating ?r ; imdb:numVotes ?v .
+\end{lstlisting}
+
+\subparagraph{Years as integers.}
+B2 types years as \texttt{xsd:gYear}, G7 as \texttt{xsd:integer}. The type of B2 is the more precise one, but SPARQL defines no arithmetic on \texttt{xsd:gYear}. In the three questions that compute an age (Q4, Q6, Q8), the natural expression \texttt{?y - ?b} silently returns no value on B2, without an error, and the query has to cast both years through a string:
+\begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
+# G7
+SELECT ?name (MAX(?y - ?b) AS ?age) WHERE { ... }
+# B2
+SELECT ?name (MAX(xsd:integer(STR(?y)) - xsd:integer(STR(?b))) AS ?age) WHERE { ... }
+\end{lstlisting}
+A user who writes the natural query on B2 receives an empty result, not a wrong one, and would have to know the datatype to find the reason.
+
+\subparagraph{Code lists as nodes.}
+B2 turns genres and credit categories into nodes with their own type and label, G7 keeps them as literals. Nodes are the more expressive choice, since further information could be attached to a genre, but none of the nine questions benefits from it. Instead, B2 needs one more hop to reach the name of a genre (Q1), and the user has to know the IRI pattern of the categories (\texttt{role:actor}) to filter by them (Q6). In Q1, the two additional hops halve the speed.
+
+\subparagraph{Equal cases.}
+For keyword search over titles (Q9), both graphs keep the primary title as \texttt{rdfs:label}, so the queries are identical and equally fast. Neither graph defines a class hierarchy, so ``series'' has to be expressed as two classes (\texttt{tvSeries} and \texttt{tvMiniSeries}) in both (Q5), and ``actor'' as two categories (\texttt{actor} and \texttt{actress}) in both (Q6).
+
+The absolute differences are small, at most 54\,ms on a graph of 2.5 million triples, but they are systematic: G7 is never slower, and the largest speed-ups occur in the questions with the most additional hops (Q1, Q6, Q7). Together with the judge scores, this shows that the more compact modeling of G7 is not only judged better, but also makes the graph simpler and faster to query.
+
+\paragraph{Mondial}
+% TODO: B5 vs G5 qualitative comparison (separate session).
+
+\paragraph{MusicBrainz}
+% TODO: G8 qualitative analysis; no baseline to compare against (separate session).
