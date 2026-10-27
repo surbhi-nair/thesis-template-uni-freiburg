@@ -1,0 +1,21 @@
+Review the following {N} SPARQL CONSTRUCT queries targeting the "{KG_NAME}" knowledge graph. Together they are intended to produce one coherent semantic graph:
+
+### {QUERY_NAME_1}
+```sparql
+{QUERY_1}
+```
+
+...
+
+## Computed source coverage
+
+{COVERED} of {TOTAL} source predicates ({PERCENT}%) are referenced by these queries.
+
+A predicate counts as referenced if its IRI appears anywhere in a query, so this is an upper bound: a predicate can be referenced and still have its values dropped.
+
+The following {N_UNCOVERED} source predicate(s) are referenced by NO query, ordered by triple count:
+
+- <{PREDICATE_IRI}> ({COUNT} triples)
+- ...
+
+Each of these carries source data that the output graph will not contain. Report them under SOURCE COVERAGE, naming the ones that matter and what should be added to cover them, unless the data is genuinely represented some other way.

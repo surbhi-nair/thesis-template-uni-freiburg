@@ -1,0 +1,294 @@
+\begin{thebibliography}{37}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[{Anomaly Innovations} and {OpenCode contributors}(2025)]{opencode}
+{Anomaly Innovations} and {OpenCode contributors}.
+\newblock {OpenCode}: The open source {AI} coding agent.
+\newblock \url{https://opencode.ai}, source code at
+  \url{https://github.com/anomalyco/opencode}, 2025.
+
+\bibitem[Arenas et~al.(2012)Arenas, Bertails, Prud'hommeaux, and
+  Sequeda]{w3c2012directmapping}
+Marcelo Arenas, Alexandre Bertails, Eric Prud'hommeaux, and Juan Sequeda.
+\newblock A direct mapping of relational data to {RDF}.
+\newblock W3c recommendation, World Wide Web Consortium (W3C), September 2012.
+\newblock URL
+  \url{https://www.w3.org/TR/2012/REC-rdb-direct-mapping-20120927/}.
+\newblock Latest version: \url{https://www.w3.org/TR/rdb-direct-mapping/}.
+
+\bibitem[Arenas-Guerrero et~al.(2024)Arenas-Guerrero, Chaves-Fraga, Toledo,
+  P{\'e}rez, and Corcho]{arenas2024morphkgc}
+Juli{\'a}n Arenas-Guerrero, David Chaves-Fraga, Jhon Toledo, Mar{\'i}a~S.
+  P{\'e}rez, and Oscar Corcho.
+\newblock {Morph-KGC}: Scalable knowledge graph materialization with mapping
+  partitions.
+\newblock \emph{Semantic Web}, 15\penalty0 (1):\penalty0 1--20, 2024.
+
+\bibitem[Asprino et~al.(2023)Asprino, Daga, Gangemi, and
+  Mulholland]{asprino2023facade}
+Luigi Asprino, Enrico Daga, Aldo Gangemi, and Paul Mulholland.
+\newblock Knowledge graph construction with a fa{\c{c}}ade: A unified method to
+  access heterogeneous data sources on the web.
+\newblock \emph{ACM Transactions on Internet Technology}, 23\penalty0 (1),
+  2023.
+
+\bibitem[Bast and Buchhold(2017)]{bast2017qlever}
+Hannah Bast and Bj{\"o}rn Buchhold.
+\newblock {QLever}: A query engine for efficient {SPARQL+Text} search.
+\newblock In \emph{Proceedings of the 2017 ACM on Conference on Information and
+  Knowledge Management (CIKM)}, pages 647--656, 2017.
+
+\bibitem[Bian(2025)]{bian2025llm}
+Haonan Bian.
+\newblock Llm-empowered knowledge graph construction: A survey.
+\newblock \emph{arXiv preprint arXiv:2510.20345}, 2025.
+
+\bibitem[Castedo et~al.(2026)Castedo, Iglesias, Lama, Bugarin-Diz, Vidal, and
+  Chaves-Fraga]{castedo2026blinkg}
+Carla Castedo, Enrique Iglesias, Manuel Lama, Alberto Bugarin-Diz, Maria-Esther
+  Vidal, and David Chaves-Fraga.
+\newblock Blinkg: A benchmark for llm-integrated knowledge graph generation.
+\newblock \emph{arXiv preprint arXiv:2605.19518}, 2026.
+
+\bibitem[Cyganiak()]{tarql}
+Richard Cyganiak.
+\newblock Tarql: {SPARQL} for tables.
+\newblock \url{https://github.com/tarql/tarql}.
+\newblock Accessed: 2026-10-09.
+
+\bibitem[Das et~al.(2012)Das, Sundara, and Cyganiak]{das2012r2rml}
+Souripriya Das, Seema Sundara, and Richard Cyganiak.
+\newblock {R2RML}: {RDB} to {RDF} mapping language.
+\newblock W3C Recommendation, 2012.
+\newblock URL \url{https://www.w3.org/TR/r2rml/}.
+
+\bibitem[Dimou et~al.(2014)Dimou, Vander~Sande, Colpaert, Verborgh, Mannens,
+  and Van~de Walle]{dimou2014rml}
+Anastasia Dimou, Miel Vander~Sande, Pieter Colpaert, Ruben Verborgh, Erik
+  Mannens, and Rik Van~de Walle.
+\newblock {RML}: A generic language for integrated {RDF} mappings of
+  heterogeneous data sources.
+\newblock In \emph{Proceedings of the Workshop on Linked Data on the Web
+  (LDOW)}, 2014.
+
+\bibitem[Fern{\'a}ndez-L{\'o}pez et~al.(1997)Fern{\'a}ndez-L{\'o}pez,
+  G{\'o}mez-P{\'e}rez, and Juristo]{fernandez1997methontology}
+Mariano Fern{\'a}ndez-L{\'o}pez, Asunci{\'o}n G{\'o}mez-P{\'e}rez, and Natalia
+  Juristo.
+\newblock {METHONTOLOGY}: From ontological art towards ontological engineering.
+\newblock In \emph{Proceedings of the AAAI-97 Spring Symposium on Ontological
+  Engineering}, number SS-97-06 in AAAI Technical Report, pages 33--40,
+  Stanford, CA, USA, 1997. AAAI Press.
+
+\bibitem[Frey et~al.(2023)Frey, Meyer, Arndt, Brei, and
+  Bulert]{frey2023benchmarking}
+Johannes Frey, Lars-Peter Meyer, Natanael Arndt, Felix Brei, and Kirill Bulert.
+\newblock Benchmarking the abilities of large language models for rdf knowledge
+  graph creation and comprehension: how well do llms speak turtle?
+\newblock \emph{arXiv preprint arXiv:2309.17122}, 2023.
+
+\bibitem[Gr{\"u}ninger and Fox(1995)]{gruninger1995methodology}
+Michael Gr{\"u}ninger and Mark~S. Fox.
+\newblock Methodology for the design and evaluation of ontologies.
+\newblock In \emph{Proceedings of the IJCAI-95 Workshop on Basic Ontological
+  Issues in Knowledge Sharing}, 1995.
+
+\bibitem[Hariri et~al.(2025)Hariri, Jean, and Baron]{hariri2025towards}
+Ali Hariri, St{\'e}phane Jean, and Micka{\"e}l Baron.
+\newblock Towards automating rdf extraction for archaeological knowledge graphs
+  with llms.
+\newblock In \emph{International Conference on Database and Expert Systems
+  Applications}, pages 83--97. Springer, 2025.
+
+\bibitem[Harris and Seaborne(2013)]{world2013sparql}
+Steve Harris and Andy Seaborne.
+\newblock {SPARQL} 1.1 query language.
+\newblock W3C Recommendation, March 2013.
+\newblock URL \url{https://www.w3.org/TR/sparql11-query/}.
+
+\bibitem[Hofer et~al.(2024)Hofer, Frey, and Rahm]{hofer2024towards}
+Marvin Hofer, Johannes Frey, and Erhard Rahm.
+\newblock Towards self-configuring knowledge graph construction pipelines using
+  llms-a case study with rml.
+\newblock In \emph{Fifth International Workshop on Knowledge Graph
+  Construction@ ESWC2024}, 2024.
+
+\bibitem[{IMDb.com, Inc.}(2026)]{imdb_datasets}
+{IMDb.com, Inc.}
+\newblock {IMDb} non-commercial datasets.
+\newblock \url{https://data.imdb.com/non-commercial-datasets/}, 2026.
+\newblock Files downloaded from \url{https://datasets.imdbws.com/} on
+  <YYYY-MM-DD>. Personal and non-commercial use only. Accessed: <YYYY-MM-DD>.
+
+\bibitem[Kommineni et~al.(2024)Kommineni, K{\"o}nig-Ries, and
+  Samuel]{kommineni2024human}
+Vamsi~Krishna Kommineni, Birgitta K{\"o}nig-Ries, and Sheeba Samuel.
+\newblock From human experts to machines: An {LLM} supported approach to
+  ontology and knowledge graph construction.
+\newblock \emph{arXiv preprint arXiv:2403.08345}, 2024.
+
+\bibitem[Li et~al.(2023)Li, Hui, Qu, Yang, Li, Li, Wang, Qin, Geng, Huo, Zhou,
+  Ma, Li, Chang, Huang, Cheng, and Li]{li2023bird}
+Jinyang Li, Binyuan Hui, Ge~Qu, Jiaxi Yang, Binhua Li, Bowen Li, Bailin Wang,
+  Bowen Qin, Ruiying Geng, Nan Huo, Xuanhe Zhou, Chenhao Ma, Guoliang Li, Kevin
+  C.~C. Chang, Fei Huang, Reynold Cheng, and Yongbin Li.
+\newblock Can {LLM} already serve as a database interface? {A} {BI}g bench for
+  large-scale database grounded text-to-{SQL}s.
+\newblock In \emph{Advances in Neural Information Processing Systems 36
+  (NeurIPS 2023), Datasets and Benchmarks Track}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2305.03111}.
+
+\bibitem[Lippolis et~al.(2024)Lippolis, Ceriani, Zuppiroli, and
+  Nuzzolese]{lippolis2024ontogenia}
+Anna~Sofia Lippolis, Miguel Ceriani, Sara Zuppiroli, and Andrea~Giovanni
+  Nuzzolese.
+\newblock Ontogenia: Ontology generation with metacognitive prompting in large
+  language models.
+\newblock In \emph{The Semantic Web: ESWC 2024 Satellite Events}, 2024.
+
+\bibitem[Lippolis et~al.(2025)Lippolis, Saeedizade, Keskis{\"a}rkk{\"a},
+  Zuppiroli, Ceriani, Gangemi, Blomqvist, and Nuzzolese]{lippolis2025ontology}
+Anna~Sofia Lippolis, Mohammad~Javad Saeedizade, Robin Keskis{\"a}rkk{\"a}, Sara
+  Zuppiroli, Miguel Ceriani, Aldo Gangemi, Eva Blomqvist, and Andrea~Giovanni
+  Nuzzolese.
+\newblock Ontology generation using large language models, March 2025.
+\newblock URL \url{https://arxiv.org/abs/2503.05388}.
+
+\bibitem[Martin et~al.(2026)Martin, Cioara, Anghel, and
+  Arcas]{martin2026performance}
+Ioana~Ramona Martin, Tudor Cioara, Ionut Anghel, and Gabriel Arcas.
+\newblock Performance evaluation of large language models for automated
+  knowledge graph generation.
+\newblock \emph{Machine Learning with Applications}, page 100923, 2026.
+
+\bibitem[May(1999)]{may-MONDIAL-report-99}
+Wolfgang May.
+\newblock Information extraction and integration with \textsc{Florid}: The
+  \textsc{Mondial} case study.
+\newblock Technical Report 131, Universit\"at Freiburg, Institut f\"ur
+  Informatik, 1999.
+\newblock Available from
+  \url{http://dbis.informatik.uni-goettingen.de/Mondial}.
+
+\bibitem[{MetaBrainz Foundation}(2026)]{musicbrainz_dump}
+{MetaBrainz Foundation}.
+\newblock {MusicBrainz} database, sample data dump 20261001-000001.
+\newblock
+  \url{https://data.metabrainz.org/pub/musicbrainz/data/sample/20261001-000001/},
+  2026.
+\newblock TSV export (mbdump, mbdump-derived). Core data CC0 1.0; derived data
+  CC BY-NC-SA 3.0. Accessed: <YYYY-MM-DD>.
+
+\bibitem[Meyer et~al.(2025)Meyer, Frey, Heim, Brei, Stadler, Junghanns, and
+  Martin]{meyer2025llm}
+Lars-Peter Meyer, Johannes Frey, Desiree Heim, Felix Brei, Claus Stadler, Kurt
+  Junghanns, and Michael Martin.
+\newblock Llm-kg-bench 3.0: A compass for semantic technology capabilities in
+  the ocean of llms.
+\newblock In \emph{European Semantic Web Conference}, pages 280--296. Springer,
+  2025.
+
+\bibitem[Pellegrino and Tuozzo(2025)]{pellegrino2025quality}
+Maria~Angela Pellegrino and Gabriele Tuozzo.
+\newblock From quality reports to knowledge graphs: a case study on csv-to-kg
+  transformation.
+\newblock In \emph{Companion Proceedings of the ACM on Web Conference 2025},
+  pages 1626--1632, 2025.
+
+\bibitem[Poveda-Villal{\'o}n et~al.(2022)Poveda-Villal{\'o}n,
+  Fern{\'a}ndez-Izquierdo, Fern{\'a}ndez-L{\'o}pez, and
+  Garc{\'i}a-Castro]{povedavillalon2022lot}
+Mar{\'i}a Poveda-Villal{\'o}n, Alba Fern{\'a}ndez-Izquierdo, Mariano
+  Fern{\'a}ndez-L{\'o}pez, and Ra{\'u}l Garc{\'i}a-Castro.
+\newblock {LOT}: An industrial oriented ontology engineering framework.
+\newblock \emph{Engineering Applications of Artificial Intelligence},
+  111:\penalty0 104755, 2022.
+
+\bibitem[Randles and O'Sullivan(2024)]{randles2024r2}
+Alex Randles and Declan O'Sullivan.
+\newblock R2 [rml]-chatgpt framework.
+\newblock In \emph{Fifth International Workshop on Knowledge Graph
+  Construction@ ESWC2024}, 2024.
+
+\bibitem[Saeedizade and Blomqvist(2024)]{saeedizade2024navigating}
+Mohammad~Javad Saeedizade and Eva Blomqvist.
+\newblock Navigating ontology development with large language models.
+\newblock In Albert Mero{\~n}o~Pe{\~n}uela, Anastasia Dimou, Rapha{\"e}l
+  Troncy, Olaf Hartig, Maribel Acosta, Mehwish Alam, Heiko Paulheim, and
+  Pasquale Lisena, editors, \emph{The Semantic Web: 21st International
+  Conference, ESWC 2024, Proceedings, Part I}, volume 14664 of \emph{Lecture
+  Notes in Computer Science}, pages 143--161, Cham, 2024. Springer.
+\newblock \doi{10.1007/978-3-031-60626-7_8}.
+
+\bibitem[Schmidt et~al.(2025)Schmidt, Grangel-Gonz{\'a}lez, Paschke, and
+  Kharlamov]{schmidt2025llm}
+Wilma~Johanna Schmidt, Irl{\'a}n Grangel-Gonz{\'a}lez, Adrian Paschke, and
+  Evgeny Kharlamov.
+\newblock {LLM}-supported manufacturing mapping generation.
+\newblock \emph{Transactions on Graph Data and Knowledge}, 3\penalty0
+  (3):\penalty0 5:1--5:22, 2025.
+\newblock \doi{10.4230/TGDK.3.3.5}.
+
+\bibitem[Trajanoska et~al.(2025)Trajanoska, Stojanov, and
+  Trajanov]{trajanoska2025multi}
+Milena Trajanoska, Riste Stojanov, and Dimitar Trajanov.
+\newblock A multi-agent system for semantic mapping of relational data to
+  knowledge graphs.
+\newblock \emph{arXiv preprint arXiv:2511.06455}, 2025.
+
+\bibitem[Tuozzo et~al.(2024)]{tuozzo2024moving}
+Gabriele Tuozzo et~al.
+\newblock Moving from tabular knowledge graph quality assessment to rdf triples
+  leveraging chatgpt.
+\newblock In \emph{TEXT2KG/DQMLKG@ ESWC}, page~9, 2024.
+
+\bibitem[Val-Calvo et~al.(2025)Val-Calvo, Ega{\~n}a~Aranguren,
+  Mulero-Hern{\'a}ndez, Almagro-Hern{\'a}ndez, Deshmukh, Bernab{\'e}-D{\'i}az,
+  Espinoza-Arias, S{\'a}nchez-Fern{\'a}ndez, Mueller, and
+  Fern{\'a}ndez-Breis]{valcalvo2025ontogenix}
+Mikel Val-Calvo, Mikel Ega{\~n}a~Aranguren, Juan Mulero-Hern{\'a}ndez,
+  Gin{\'e}s Almagro-Hern{\'a}ndez, Prashant Deshmukh, Jos{\'e}~Antonio
+  Bernab{\'e}-D{\'i}az, Paola Espinoza-Arias, Jos{\'e}~Luis
+  S{\'a}nchez-Fern{\'a}ndez, Juergen Mueller, and Jesualdo~Tom{\'a}s
+  Fern{\'a}ndez-Breis.
+\newblock {OntoGenix}: Leveraging large language models for enhanced ontology
+  engineering from datasets.
+\newblock \emph{Information Processing \& Management}, 62\penalty0 (3), 2025.
+
+\bibitem[Vitter(1985)]{vitter1985random}
+Jeffrey~S. Vitter.
+\newblock Random sampling with a reservoir.
+\newblock \emph{ACM Transactions on Mathematical Software}, 11\penalty0
+  (1):\penalty0 37--57, 1985.
+
+\bibitem[Walter and Bast(2025)]{walter2025grasp}
+Sebastian Walter and Hannah Bast.
+\newblock {GRASP}: Generic reasoning and {SPARQL} generation across knowledge
+  graphs.
+\newblock In \emph{The Semantic Web -- ISWC 2025: 24th International Semantic
+  Web Conference, Proceedings, Part I}, volume 16140 of \emph{Lecture Notes in
+  Computer Science}, pages 271--289, Cham, 2025. Springer.
+
+\bibitem[Xiao et~al.(2025)Xiao, Ren, Qi, Xue, Di~Panfilo, and
+  Lanti]{xiao2025llm4vkg}
+Guohui Xiao, Lin Ren, Guilin Qi, Haohan Xue, Marco Di~Panfilo, and Davide
+  Lanti.
+\newblock {LLM4VKG}: Leveraging large language models for virtual knowledge
+  graph construction.
+\newblock In \emph{Proceedings of the Thirty-Fourth International Joint
+  Conference on Artificial Intelligence, {IJCAI-25}}, pages 4715--4723, 2025.
+\newblock \doi{10.24963/ijcai.2025/525}.
+
+\bibitem[Yao et~al.(2023)Yao, Zhao, Yu, Du, Shafran, Narasimhan, and
+  Cao]{yao2023react}
+Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan,
+  and Yuan Cao.
+\newblock {ReAct}: Synergizing reasoning and acting in language models.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2023.
+
+\end{thebibliography}

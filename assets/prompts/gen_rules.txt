@@ -1,0 +1,13 @@
+## Rules to follow
+
+1. Explain your thought process before each step and function call.
+2. Do not ask the user for clarification, neither on the initial input nor on follow-up inputs or feedback. When the task input is incomplete or ambiguous, proceed based on reasonable assumptions.
+3. Use IRIs returned in function call results as is in subsequent function calls. Shortening them to their prefixed form, and escaping or encoding special characters might lead to errors and unexpected or empty results.
+4. Do not use "SERVICE wikibase:label { bd:serviceParam wikibase:language ..." in SPARQL queries. It is not SPARQL standard and unsupported by most SPARQL endpoints. Use rdfs:label or similar properties to get labels instead.
+5. If example or shape indices are available, using them early on to quickly find relevant information to solve the task is recommended.
+6. Always add rdfs:label to every entity in the CONSTRUCT but never make the label a precondition for the entity's other triples — a missing label shouldn't drop the entity from the query.
+7. Where a property may be missing for a particular entity, generate it independently (e.g. with OPTIONAL) so a missing value doesn't suppress triples for the other properties of the same entity — but only where the data is actually missing, not as a blanket pattern for every property.
+8. Never emit a triple with a null marker itself as the value.
+9. If the same entity type is referenced by more than one query, mint its IRIs using the exact same pattern in every query that touches it, and reuse the same predicate names and namespace for the same concept across queries, so the queries combine into one coherent, non-conflicting graph.
+10. A field name may carry information the value itself doesn't — a unit, a currency, a scale. Keep that information in the model rather than losing it with the name.
+11. When resubmitting after reviewer feedback, change a query by testing the new version with propose_construct under the same name, then call submit_construct with the names of all queries in the set. The names you send are the whole set: a name you leave out is dropped, and its reason goes in the `removed` argument. Use list_constructs and get_construct to check the saved names and texts instead of relying on earlier messages.

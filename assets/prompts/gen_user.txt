@@ -1,0 +1,1 @@
+Analyse the "{KG_NAME}" knowledge graph and generate one or more SPARQL CONSTRUCT queries that model it as a well-formed, semantically correct knowledge graph.

@@ -1,2 +1,50 @@
 \addcontentsline{toc}{section}{\iflanguage{english}{Appendix}{Anhang}}
 \section*{\iflanguage{english}{Appendix}{Anhang}}\label{sec:appendix}
+
+\lstdefinestyle{prompt}{
+  language={},
+  basicstyle=\ttfamily\footnotesize\linespread{1.05}\selectfont,
+  backgroundcolor=\color{lstbg},
+  frame=single,
+  rulecolor=\color{gray!40},
+  numbers=none,
+  xleftmargin=4pt,
+  xrightmargin=4pt,
+  framesep=4pt,
+  breaklines=true,
+  breakatwhitespace=true,
+  breakindent=0pt,
+  postbreak={},
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  upquote=true,
+  aboveskip=6pt,
+  belowskip=10pt,
+  literate={—}{{\textemdash}}1 {×}{{$\times$}}1
+}
+
+This appendix lists the prompts of the two agents of our approach (Section~\ref{sec:approach-construct}) and of the LLM judge (Section~\ref{sec:setup}). Text in braces, such as \texttt{\{KG\_NAME\}}, is filled in per run; everything else is reproduced verbatim.
+
+\paragraph{Generation agent:}
+The system prompt is shown with competency questions. Without them, step~4, the two paragraphs after the steps, and the list of competency questions are omitted, and the submission step becomes step~4.
+\lstinputlisting[style=prompt]{assets/prompts/gen_system.txt}
+GRASP then appends its standard sections on the index types, the available knowledge graphs, and their notes and prefixes, followed by the rules. Rules 1--5 are the general rules of GRASP, rules 6--11 are specific to this task.
+\lstinputlisting[style=prompt]{assets/prompts/gen_rules.txt}
+The first user message is:
+\lstinputlisting[style=prompt]{assets/prompts/gen_user.txt}
+
+\paragraph{Review agent:}
+The system prompt is assembled in the same way. The two competency-question items and the list of competency questions are only included when competency questions are given, and the item \texttt{CROSS-QUERY CONSISTENCY} only when more than one query is submitted.
+\lstinputlisting[style=prompt]{assets/prompts/review_system.txt}
+It is followed by the standard sections of GRASP and the rules:
+\lstinputlisting[style=prompt]{assets/prompts/review_rules.txt}
+The user message contains the submitted queries and the computed source coverage. If the source predicates cannot be listed, the coverage section only states that the coverage is unavailable and asks the reviewer to verify it by querying the knowledge graph.
+\lstinputlisting[style=prompt]{assets/prompts/review_user.txt}
+
+\paragraph{Baseline:}
+The prompts of the baseline mirror those of our approach. They contain the same task description, the same design steps, the review checklist of the review agent as a final self-check, and the same task-specific rules, adapted to an N-Triples file instead of a SPARQL endpoint and to writing the queries into a file instead of submitting them.
+
+\paragraph{LLM judge:}
+The judge receives the following instructions as its prompt in OpenCode. Only the configuration block at the top differs between runs.
+\lstinputlisting[style=prompt, basicstyle=\ttfamily\scriptsize\linespread{1.05}\selectfont]{assets/prompts/judge.txt}

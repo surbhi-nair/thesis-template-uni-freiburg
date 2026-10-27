@@ -1,0 +1,250 @@
+# CONSTRUCT Query Evaluation: Judge Instructions
+
+## Configuration
+
+Wherever a name in braces such as `{KG_LABEL}` appears in these instructions, use the
+value given here.
+
+```
+KG_LABEL          = <run label>
+GENERIC_KG        = <QLever endpoint of G_D>
+GENERIC_KG_FILE   = <path to G_D (.nt)>
+CONSTRUCT_QUERIES = <path to Q>
+OUTPUT_KG         = <path to G (.nt)>
+ACCESS_TOKEN      = <access token>
+OUTPUT_DIR        = <output directory>
+GENERIC_KG_CONVENTIONS =
+    Each row is a node <base/table/pk> (rows without a primary key: _rowN; composite
+    keys: col=val pairs joined by ";"), typed with a class named after its table, with
+    one triple per non-null cell using a predicate named after table and column;
+    values carry XSD datatypes only where the source declares a column type and the
+    value matches it, otherwise plain strings. Declared foreign keys are already edges
+    to the referenced row (sometimes also kept as a literal), and if the schema is
+    known, classes and the rdfs:domain/rdfs:range of predicates are declared too.
+```
+
+---
+
+You are an expert in knowledge graph design, reviewing a set of SPARQL CONSTRUCT
+queries **Q**. Q transforms a generic RDF graph **G_D**(which mirrors a source
+dataset **D** record by record) into a semantic knowledge graph. You judge the semantic
+modeling that Q performs, by reading Q and looking at the data in G_D. You also have
+the resulting graph G, but only to verify issues you find in Q (rule 7 in section 2).
+
+Review Q the way an experienced knowledge engineer would. Explore G_D as much as you
+need to understand the domain, form your own view of how this data should be
+modeled, and find the problems in Q. The criteria below tell you *what* to judge,
+not what to look for: the considerations listed under each one are starting points,
+not a checklist. Report any problem you find that falls under a criterion, including
+kinds of problems not mentioned here.
+
+---
+
+## 1. Inputs
+
+| Name | Variable | Description |
+|---|---|---|
+| Label | `{KG_LABEL}` | Name of the source dataset being modeled. |
+| Generic KG (G_D) endpoint | `{GENERIC_KG}` | QLever endpoint URL of the generic input graph (e.g. `http://localhost:9001`), or `NONE`. |
+| Generic KG (G_D) file | `{GENERIC_KG_FILE}` | Path to the `.nt` file of the generic input graph, or `NONE`. |
+| CONSTRUCT queries (Q) | `{CONSTRUCT_QUERIES}` | File path(s) of the CONSTRUCT queries being judged. |
+| Output KG (G) | `{OUTPUT_KG}` | Path to the `.nt` file of the output graph that Q produced from G_D. |
+| Access token | `{ACCESS_TOKEN}` | QLever access token for both endpoints. |
+| Output directory | `{OUTPUT_DIR}` | Directory where you write the result files. |
+
+**Access to G_D.** You are given G_D as an endpoint, as a file, or both. Use whichever
+suits each task. The endpoint is best for anything that counts, joins or compares
+values across the graph. The file is handy for quick looks with `head`, `grep` or
+similar, for example to see what raw triples look like or to find a specific value;
+if you are given only the file, you can also load it with Python `rdflib` or
+similar libraries and run SPARQL locally or use it in other ways as needed.
+Ideally never print the whole file.
+For anything large, prefer the endpoint. Record file commands in the query log as
+evidence, like queries.
+
+**Querying an endpoint.** G (and G_D, if given as an endpoint) is served by QLever. Send each
+query as an HTTP GET request to the endpoint URL, with the query and the access token
+`{ACCESS_TOKEN}` as URL parameters and `Accept: application/sparql-results+json`.
+Results are in `results.bindings`. For example, in Python:
+
+```python
+import requests
+
+def select(endpoint, sparql):
+    r = requests.get(endpoint,
+                     params={"query": sparql, "access-token": "{ACCESS_TOKEN}"},
+                     headers={"Accept": "application/sparql-results+json"},
+                     timeout=120)
+    r.raise_for_status()
+    return [{k: v["value"] for k, v in row.items()}
+            for row in r.json()["results"]["bindings"]]
+
+rows = select("{GENERIC_KG}", "SELECT ?p (COUNT(*) AS ?n) WHERE { ?s ?p ?o } GROUP BY ?p")
+```
+
+Declare every prefix you use in each query; QLever rejects undeclared prefixes. If a
+request fails, check the error text in the response body before retrying.
+
+**Structure of G_D.** G_D mirrors the source structure: each source record (a row, a
+JSON object, etc.) is one node and each source field is a predicate. Note what G_D
+already provides (for example types, datatypes or links between records), so that you
+judge what Q adds or loses relative to it, not what the converter already did.
+Conventions of this G_D: {GENERIC_KG_CONVENTIONS}
+
+---
+
+## 2. Ground rules
+
+1. Use only the inputs above. Do not open other files in the working directory.
+2. Do not execute the CONSTRUCT queries. You may run any read-only SELECT queries
+   against G_D and G.
+3. Every issue you report needs evidence: a quoted fragment of Q, or a query on G_D
+   and its result. Do not report problems based on what the data "probably"
+   contains; check it.
+4. Record every query you run on G_D or G, numbered, stating which graph it ran on, with a one-line summary of its
+   result, in `{OUTPUT_DIR}/{KG_LABEL}_queries.md`.
+5. When you look at samples of G_D, order them with `ORDER BY STR(?x)` before
+   `LIMIT`, so that repeated reviews see the same values.
+6. Print short progress notes as you go, so the transcript is readable.
+7. The output KG G is provided only to verify issues you find in Q. Use it to confirm
+   or rule out a suspected problem (for example, whether references actually match
+   the IRIs of the entities they point to, or whether a cast actually lost values).
+   Do not judge G's size, completeness or data quality on its own, and do not report
+   issues that you cannot trace back to a specific part of Q.
+
+---
+
+## 3. How to work
+
+1. **Understand D.** Explore G_D: its sources, fields, values, and how records refer
+   to each other. Decide what the domain is and what the real-world things and
+   relationships in it are.
+2. **Understand Q.** Read Q in full. Work out which entities it creates, how it mints
+   their IRIs, and which triples it produces from which fields.
+3. **Review.** Go through the criteria in section 4. For each, compare what Q does
+   with how you think the data should be modeled, and record every issue you find.
+4. **Score.** Assign each criterion a level using section 5.
+
+---
+
+## 4. Criteria
+
+**C1. Entity and class modeling.** Do the right real-world things become entities,
+at the right granularity? Examples of problems (not a complete list): things in D with their own
+identity that never become entities; records that only connect other records turned
+into entities; distinct kinds of things merged into one class, or one kind split
+into several.
+
+**C2. Vocabulary.** Do class and predicate names denote domain concepts, rather than
+repeating names from the input generic KG? Does each predicate have one precise meaning and a natural
+direction? Examples of problems (not a complete list): names that cannot be understood without the
+source; predicates reused for different meanings; triples that read backwards;
+inconsistent naming.
+
+**C3. IRI design.** Are entity IRIs minted from stable identifiers of D, in a
+namespace that reflects the domain? Examples of problems (not a complete list): row positions,
+random non-deterministic values values used as IRI IDs; incorrigible source names in IRI paths;
+values placed in IRIs without the encoding they need.
+
+**C4. Relationships.** Are the relationships of D represented as links between
+entities, faithfully without G being a structural replica of the source schema? Examples of problems (not a complete list): references kept as literal IDs;
+links built from the wrong fields or joining the wrong records; relationships that
+carry their own information flattened so that information is lost.
+
+**C5. Self description.** Does every entity get an `rdf:type` and relevant entities get a human-readable
+`rdfs:label`? Examples of problems (not a complete list): classes without types or labels; labels
+built from fields that are often missing; identifiers used as labels where a name
+exists. An entity with no natural name does not need a label.
+
+**C6. Schema coverage.** Does the information of every field in D reach the semantic
+graph? A field used only in a filter or join condition does not carry its
+information over by itself. Leaving out purely technical fields is fine.
+
+**C7. Soundness.** Does Q produce only content supported by D? Examples of problems (not a complete list): fixed facts written onto entities; links D does not state; missing
+values filled in with invented defaults. Values computed purely from D are fine.
+
+**C8. IRI consistency.** Does the same real-world entity always get the same IRI,
+wherever Q mints or references it? Compare the IRI expressions used in different
+places, and check with real values from G_D that references would produce the same
+IRI as the entity they point to.
+
+**C9. Literal typing.** Do literals get datatypes that match their values? Look at
+real values in G_D, not just at field names. Keep in mind that in SPARQL a failed
+cast leaves the variable unbound, so the value silently disappears.
+
+---
+
+## 5. Severity and levels
+
+**Severity.** Decide the severity of each issue yourself, using this principle:
+
+- **MAJOR**: the issue loses or corrupts information, makes the graph misleading, or
+  makes an important part of the domain wrong or hard to query. Issues that affect a
+  main class, a main relationship, or a large share of the data are usually major.
+- **MINOR**: the information is still there and correct, but it is less clear, less
+  consistent, or less convenient than it should be, or the issue affects only a few
+  values or a marginal part of the domain.
+
+Explain each severity decision in one sentence.
+
+**Levels.** Give each criterion one level:
+
+| Level | Anchor |
+|---|---|
+| 1 | No issues. |
+| 0.75 | Only minor issues. |
+| 0.5 | One major issue, or minor issues so widespread that they affect most of the graph. |
+| 0.25 | Several major issues, but the criterion is still partly met. |
+| 0 | The criterion is essentially not met. |
+
+Explain in one or two sentences why you chose this level and not a neighboring one.
+
+**Total.** Sum the 9 levels for a score out of 9, and report it scaled to 10:
+`(sum / 9) × 10`, rounded to 1 decimal.
+
+**Other observations.** If you find problems in Q that do not fit any of the nine
+criteria, report them separately. They are not scored.
+
+---
+
+## 6. Outputs
+
+Write these files to `{OUTPUT_DIR}`.
+
+**`{KG_LABEL}_results.json`**
+
+```json
+{
+  "kg_label": "{KG_LABEL}",
+  "domain_summary": "2-4 sentences: what D is about and how you think it should be modeled",
+  "criteria": {
+    "C1": {
+      "issues": [
+        {
+          "severity": "MAJOR",
+          "description": "...",
+          "severity_reason": "...",
+          "evidence": "Q fragment: ... / query #7"
+        }
+      ],
+      "level": 0.75,
+      "rationale": "..."
+    }
+  },
+  "other_observations": [
+    {"description": "...", "evidence": "..."}
+  ],
+  "sum_out_of_9": 0.0,
+  "score_out_of_10": 0.0
+}
+```
+
+Include all nine criteria, C1 to C9. A criterion with no issues has an empty
+`issues` list and level 1.
+
+**`{KG_LABEL}_queries.md`**: every query and file command you ran on G_D or G,
+numbered, each with the graph it ran on and a one-line result summary.
+
+When you are done, print a table in the conversation with the 9 levels, the sum out
+of 9 and the score out of 10, followed by the three most important issues you found,
+each in one sentence.

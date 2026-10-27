@@ -363,7 +363,7 @@ Table~\ref{tab:judge-scores} shows the score of every run on IMDb, Mondial, and 
 \paragraph{GRASP versus Baseline (RQ2):}
 Since the baseline produced no output for MusicBrainz, only the GRASP run is scored there, and the comparison covers the remaining seven datasets. Without competency questions, GRASP scores at least as high as the baseline on all seven, and higher on six of them; on superhero, both reach 8.9. The mean over the BIRD databases is 8.5 against 7.6, and the GRASP runs contain far fewer major issues: 3 against 16 on the BIRD databases, and 4 against 20 on all seven datasets. 
 
-The difference is concentrated in the modeling criteria. Table~\ref{tab:judge-criteria} shows the largest gaps for
+The difference is concentrated in the modeling criteria. Table~\ref{tab:judge-criteria} shows that:
 \begin{itemize}[leftmargin=*, itemsep=2pt]
   \item \textbf{Entity and class modeling (C1).} GRASP better identifies the right real-world things to model as entities, with a mean level of 0.80 against 0.65 for the baseline.
   \item \textbf{Vocabulary (C2).} GRASP uses more meaningful predicates and classes, with a mean level of 0.75 against 0.60 for the baseline.
@@ -373,29 +373,26 @@ The difference is concentrated in the modeling criteria. Table~\ref{tab:judge-cr
 The scores indicate that IRI design, coverage, and IRI consistency are on par. The judge thus finds that both approaches carry the data over equally completely, but GRASP models it slightly better.
 
 \paragraph{Effect of competency questions (RQ3):}
-From the scores, it appears that competency questions affect the two approaches in opposite directions. For the baseline, adding CQs never lowers the score: it improves it on four of the five databases (by up to 1.1 points on formula\_1) and leaves european\_football\_2 unchanged, and the mean rises from 7.6 to 8.1. For GRASP, adding CQs lowers the score on three databases, leaves superhero unchanged, and improves only california\_schools; the mean drops from 8.5 to 8.3. With CQs, the two approaches are close: GRASP is ahead on formula\_1 and california\_schools, the baseline on superhero, and they are tied on card\_games and european\_football\_2.
+From the scores, it appears that competency questions affect the two approaches in opposite directions. For the baseline, adding CQs never lowers the score: it improves it on four of the five databases, and the mean rises from 7.6 to 8.1. For GRASP, adding CQs lowers the score on three databases, leaves \texttt{superhero} unchanged, and improves only \texttt{california\_schools}. The mean here drops from 8.5 to 8.3. The general trend is that with CQs, the two approaches are close while baseline without CQs is the weakest configuration. 
 
-The criteria show where this comes from. For GRASP, the CQs lower entity modeling (C1: 0.80 to 0.65) and vocabulary (C2: 0.75 to 0.65). The clearest example is european\_football\_2: with CQs (G2), only two of the eight event columns become events, while the other six remain XML literals, and the event predicates \texttt{ef:player1} and \texttt{ef:player2} keep the positional source names, although their meaning changes with the type of event. We interpret this as the agent narrowing its model towards what the questions ask, despite the instruction that the questions are a minimum, not the scope of the model. For the baseline, CQs mainly improve coverage (C6: 0.85 to 0.95) and literal typing (C9: 0.80 to 0.90), that is, the questions point the agent to fields and value types that it would otherwise have missed, but they do not improve its modeling of entities.
+The mean score per criterion over the five BIRD databases as shown in Table~\ref{tab:judge-criteria} shows that for GRASP, adding the CQs lowers the score for entity modeling (C1: 0.80 to 0.65) and vocabulary (C2: 0.75 to 0.65). We interpret this as the agent narrowing its model towards what the questions ask, despite the instruction that the questions are a minimum, not the scope of the model. For the baseline, CQs mainly improve coverage (C6: 0.85 to 0.95) and literal typing (C9: 0.80 to 0.90), but they do not improve its overall modeling of entities.
+
+% that is, the questions point the agent to fields and value types that it would otherwise have missed,
+% The clearest example is european\_football\_2: with CQs (G2), only two of the eight event columns become events, while the other six remain XML literals, and the event predicates \texttt{ef:player1} and \texttt{ef:player2} keep the positional source names, although their meaning changes with the type of event.
 % TODO: tie this to the held-out CQ answerability results if you add them.
 
 \paragraph{Schema size and complexity (RQ4):}
-MusicBrainz, with 239 tables, has the lowest score of all runs (6.7), with four major issues. Two of them are parts of the schema that are never read: editor collections (981 collections with 4{,}752 membership rows) are not modeled, and the IPI and ISNI identifiers of labels (6{,}624 and 50 rows) never reach \(G\), although the corresponding identifiers of artists do. The other two concern the direct relationship edges, whose predicates are built from the \texttt{name} of the link type. Since these names are not unique, one predicate such as \texttt{rel:part\_of} is used for relationships between areas, between series and works, and between several other entity types. Since they are not directional, edges are emitted in the wrong direction for many link types, for example 8{,}094 edges stating that a series is part of a work. Among the other datasets, the score does not simply follow the number of tables: Mondial, with 47 tables and the densest foreign-key structure, scores 8.9, while card\_games, with six tables, scores lowest among the BIRD databases. What makes a dataset hard is not the number of tables as such, but how far its domain is from its schema, as with the printing/card distinction in card\_games or the events hidden in XML in european\_football\_2, and, for MusicBrainz, the sheer number of tables that have to be covered in one coherent model.
+Between IMDb, Mondial, and MusicBrainz, the underlying schema size increases from 14 to 47 to 239 tables. The judge scores IMDb and Mondial similarly, with 8.6 and 8.9, but scores MusicBrainz much lower, with 6.7 with four major issues. Among the other datasets, the score does not simply follow the number of tables: Mondial, with 47 tables and the densest foreign-key structure, scores 8.9, while \texttt{card\_games}, with six tables, scores lower. 
 
-The major issues of the baseline fall into recurring patterns:
-\begin{itemize}[leftmargin=*, itemsep=2pt]
-  \item \textbf{Structure kept as literals.} In european\_football\_2, both baseline runs keep the eight XML event columns of \texttt{Match} as one string literal per match, so goals, cards, and fouls never become entities and are never linked to their players and teams. GRASP without CQs (G3) models them.
-  \item \textbf{Vocabulary repeating the source.} In formula\_1, most predicates of both baseline runs repeat the column names (\texttt{f1:driverRef}, \texttt{f1:qualifyId}), and a single predicate \texttt{f1:position} is used for the finishing position, the qualifying position, the championship position, and the position in a lap.
-  \item \textbf{Wrong entities.} In california\_schools, both baseline runs type the ten district-level rows of \texttt{schools} as \texttt{cs:School}, and additionally mint the same districts under a second IRI, which the judge counts as a major issue under C1, C4, C7, and C8. In Mondial, the baseline models each country-specific percentage of a religion as an entity of class \texttt{Religion}, so the same religion is split into one entity per country.
-  \item \textbf{Invented content and lost values.} In european\_football\_2, both baseline runs write the index of a lineup slot as \texttt{ef:shirtNumber}, although the source contains no shirt numbers. In card\_games (B3), an invalid boolean cast silently drops three fields of 17 cards, and in Mondial, years are typed as \texttt{xsd:gYear} with the lexical form \texttt{1996.0}, which is not a valid year.
-\end{itemize}
-Some problems are shared by both approaches and point to the dataset rather than to the approach. In card\_games, all four runs model each printing of a card as \texttt{mtg:Card} and never introduce the abstract card that the printings share, so the list of sets in which a card was printed is attached to every printing. This is the main reason why card\_games has the lowest scores of the BIRD databases for both approaches.
+While the number of tables is a factor in the complexity of modeling since the score drops with Musicbrainz, there is no general trend within the scale of under 50 tables that can show that a larger schema is necessarily harder to model correctly. It could potentially be the case that the complexity arises from the domain-specific challenges as well and how far the domain is from the underlying schema i.e. whether the important things of the domain correspond to tables and columns or have to be recognized by the agent. 
 
-The GRASP runs have few major issues, but they are of a different kind. In california\_schools (G6), addresses and administrators are minted as blank nodes, which are not stable across executions. In Mondial (G5), entities that are only created as link targets, such as 261 provinces, never receive a type.
+For instance, in datasets such as \texttt{card\_games} and \texttt{european\_football\_2}, there is ambiguity in how the data should be interpreted and modeled. Mondial, in contrast, has comparatively more tables, but each of them corresponds closely to a concept of the domain, such as a country, a river, or a membership, so its size adds work but little ambiguity. However, scale does matter as with 239 tables in MusicBrainz, the agent has to cover a large number of tables in one coherent and internally consistent model.
 
+% database, each row of \texttt{cards} is one printing of a card in a set, and the card itself, which the printings share, has no table of its own; all four runs model only the printings. In european_football_2, the goals, cards, and other events of a match are stored as XML documents in single columns of \texttt{Match}, and become entities only if the agent parses them. In california_schools, some rows of \texttt{schools} describe a district rather than a school.
 
-\paragraph{Limitations:}
-Each configuration was run once, and each output was judged once. A difference of one level on one criterion changes the score by 0.28 points, so differences of this size between two single runs should not be over-interpreted. The consistent patterns, the GRASP lead on all seven datasets without CQs, and the opposite effect of CQs on the two approaches, are more robust than any individual difference.
+% Two of them are parts of the schema that are never read: editor collections (981 collections with 4{,}752 membership rows) are not modeled, and the IPI and ISNI identifiers of labels (6{,}624 and 50 rows) never reach \(G\), although the corresponding identifiers of artists do. The other two concern the direct relationship edges, whose predicates are built from the \texttt{name} of the link type. Since these names are not unique, one predicate such as \texttt{rel:part\_of} is used for relationships between areas, between series and works, and between several other entity types. Since they are not directional, edges are emitted in the wrong direction for many link types, for example 8{,}094 edges stating that a series is part of a work.
 
+The judge levels of all runs per criterion, and the corresponding scores are listed in Table~\ref{tab:judge-all}.
 \begin{table}[!htbp]
   \centering
   \small
@@ -405,70 +402,108 @@ Each configuration was run once, and each output was judged once. A difference o
     \hline
     \textbf{Dataset} & \textbf{Run} & \textbf{C1} & \textbf{C2} & \textbf{C3} & \textbf{C4} & \textbf{C5} & \textbf{C6} & \textbf{C7} & \textbf{C8} & \textbf{C9} & \textbf{Score} \\
     \hline
-    superhero  & B6          & 0.5  & 0.75 & 1    & 0.75 & 1    & 1    & 1    & 1    & 1    & 8.9 \\
-               & B7 (CQ)     & 0.75 & 1    & 1    & 0.75 & 1    & 0.75 & 1    & 1    & 1    & 9.2 \\
-               & G19         & 1    & 0.75 & 1    & 1    & 0.75 & 0.75 & 0.75 & 1    & 1    & 8.9 \\
-               & G20 (CQ)    & 0.75 & 0.75 & 1    & 1    & 0.75 & 1    & 0.75 & 1    & 1    & 8.9 \\
+    IMDb       & Baseline      & 0.50 & 0.50 & 1.00 & 1.00 & 0.75 & 1.00 & 1.00 & 1.00 & 1.00 & 8.6 \\
+               & GRASP         & 0.75 & 0.75 & 1.00 & 1.00 & 0.75 & 1.00 & 1.00 & 1.00 & 1.00 & 9.2 \\
     \hline
-    card\_games & B3         & 0.75 & 0.5  & 1    & 0.5  & 0.75 & 0.5  & 1    & 1    & 0.5  & 7.2 \\
-               & B4 (CQ)     & 0.5  & 0.5  & 1    & 0.5  & 0.75 & 1    & 1    & 1    & 0.5  & 7.5 \\
-               & G7          & 0.5  & 0.75 & 1    & 0.5  & 1    & 0.75 & 0.75 & 1    & 0.75 & 7.8 \\
-               & G8 (CQ)     & 0.5  & 0.75 & 1    & 0.5  & 0.75 & 1    & 0.75 & 1    & 0.5  & 7.5 \\
+    Mondial    & Baseline      & 0.50 & 0.75 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 0.50 & 8.6 \\
+               & GRASP         & 1.00 & 0.75 & 0.75 & 1.00 & 0.50 & 1.00 & 1.00 & 1.00 & 1.00 & 8.9 \\
     \hline
-    formula\_1 & B1          & 1    & 0.25 & 0.75 & 0.5  & 0.5  & 1    & 1    & 1    & 0.5  & 7.2 \\
-               & B2 (CQ)     & 0.75 & 0.25 & 1    & 1    & 0.5  & 1    & 1    & 1    & 1    & 8.3 \\
-               & G1          & 1    & 0.75 & 1    & 0.75 & 1    & 1    & 1    & 1    & 0.75 & 9.2 \\
-               & G2 (CQ)     & 0.75 & 0.5  & 1    & 1    & 1    & 1    & 1    & 1    & 0.75 & 8.9 \\
+    MusicBrainz & GRASP         & 0.50 & 0.50 & 0.75 & 0.50 & 0.75 & 0.50 & 0.75 & 1.00 & 0.75 & 6.7 \\
     \hline
-    european\_  & B5         & 0.5  & 0.75 & 1    & 0.5  & 0.75 & 1    & 0.5  & 1    & 1    & 7.8 \\
-    football\_2 & B6 (CQ)    & 0.5  & 0.75 & 1    & 0.5  & 0.75 & 1    & 0.5  & 1    & 1    & 7.8 \\
-               & G3          & 0.75 & 0.75 & 1    & 0.75 & 1    & 0.75 & 0.75 & 1    & 1    & 8.6 \\
-               & G2 (CQ)     & 0.5  & 0.5  & 0.75 & 0.75 & 0.75 & 0.75 & 1    & 1    & 1    & 7.8 \\
+    superhero  & Baseline      & 0.50 & 0.75 & 1.00 & 0.75 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 8.9 \\
+               & Baseline + CQ & 0.75 & 1.00 & 1.00 & 0.75 & 1.00 & 0.75 & 1.00 & 1.00 & 1.00 & 9.2 \\
+               & GRASP         & 1.00 & 0.75 & 1.00 & 1.00 & 0.75 & 0.75 & 0.75 & 1.00 & 1.00 & 8.9 \\
+               & GRASP + CQ    & 0.75 & 0.75 & 1.00 & 1.00 & 0.75 & 1.00 & 0.75 & 1.00 & 1.00 & 8.9 \\
     \hline
-    california\_ & B3        & 0.5  & 0.75 & 0.75 & 0.5  & 0.75 & 0.75 & 0.5  & 0.5  & 1    & 6.7 \\
-    schools    & B4 (CQ)     & 0.5  & 0.75 & 1    & 0.5  & 0.75 & 1    & 0.75 & 0.5  & 1    & 7.5 \\
-               & G6          & 0.75 & 0.75 & 0.5  & 1    & 0.75 & 1    & 1    & 0.5  & 1    & 8.1 \\
-               & G8 (CQ)     & 0.75 & 0.75 & 0.75 & 1    & 1    & 0.75 & 0.75 & 0.75 & 1    & 8.3 \\
+    card\_games & Baseline      & 0.75 & 0.50 & 1.00 & 0.50 & 0.75 & 0.50 & 1.00 & 1.00 & 0.50 & 7.2 \\
+               & Baseline + CQ & 0.50 & 0.50 & 1.00 & 0.50 & 0.75 & 1.00 & 1.00 & 1.00 & 0.50 & 7.5 \\
+               & GRASP         & 0.50 & 0.75 & 1.00 & 0.50 & 1.00 & 0.75 & 0.75 & 1.00 & 0.75 & 7.8 \\
+               & GRASP + CQ    & 0.50 & 0.75 & 1.00 & 0.50 & 0.75 & 1.00 & 0.75 & 1.00 & 0.50 & 7.5 \\
     \hline
-    Mondial    & B5          & 0.5  & 0.75 & 1    & 1    & 1    & 1    & 1    & 1    & 0.5  & 8.6 \\
-               & G5          & 1    & 0.75 & 0.75 & 1    & 0.5  & 1    & 1    & 1    & 1    & 8.9 \\
+    formula\_1 & Baseline      & 1.00 & 0.25 & 0.75 & 0.50 & 0.50 & 1.00 & 1.00 & 1.00 & 0.50 & 7.2 \\
+               & Baseline + CQ & 0.75 & 0.25 & 1.00 & 1.00 & 0.50 & 1.00 & 1.00 & 1.00 & 1.00 & 8.3 \\
+               & GRASP         & 1.00 & 0.75 & 1.00 & 0.75 & 1.00 & 1.00 & 1.00 & 1.00 & 0.75 & 9.2 \\
+               & GRASP + CQ    & 0.75 & 0.50 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 & 0.75 & 8.9 \\
     \hline
-    IMDb       & B2          & 0.5  & 0.5  & 1    & 1    & 0.75 & 1    & 1    & 1    & 1    & 8.6 \\
-               & G7          & 0.75 & 0.75 & 1    & 1    & 0.75 & 1    & 1    & 1    & 1    & 9.2 \\
+    european\_  & Baseline      & 0.50 & 0.75 & 1.00 & 0.50 & 0.75 & 1.00 & 0.50 & 1.00 & 1.00 & 7.8 \\
+    football\_2 & Baseline + CQ & 0.50 & 0.75 & 1.00 & 0.50 & 0.75 & 1.00 & 0.50 & 1.00 & 1.00 & 7.8 \\
+               & GRASP         & 0.75 & 0.75 & 1.00 & 0.75 & 1.00 & 0.75 & 0.75 & 1.00 & 1.00 & 8.6 \\
+               & GRASP + CQ    & 0.50 & 0.50 & 0.75 & 0.75 & 0.75 & 0.75 & 1.00 & 1.00 & 1.00 & 7.8 \\
     \hline
-    MusicBrainz & G9         & 0.5  & 0.5  & 0.75 & 0.5  & 0.75 & 0.5  & 0.75 & 1    & 0.75 & 6.7 \\
+    california\_ & Baseline      & 0.50 & 0.75 & 0.75 & 0.50 & 0.75 & 0.75 & 0.50 & 0.50 & 1.00 & 6.7 \\
+    schools    & Baseline + CQ & 0.50 & 0.75 & 1.00 & 0.50 & 0.75 & 1.00 & 0.75 & 0.50 & 1.00 & 7.5 \\
+               & GRASP         & 0.75 & 0.75 & 0.50 & 1.00 & 0.75 & 1.00 & 1.00 & 0.50 & 1.00 & 8.1 \\
+               & GRASP + CQ    & 0.75 & 0.75 & 0.75 & 1.00 & 1.00 & 0.75 & 0.75 & 0.75 & 1.00 & 8.3 \\
     \hline
   \end{tabular}
   \caption[Judge levels of all runs]{Judge levels of all runs per criterion, and the score out of 10.}
   \label{tab:judge-all}
 \end{table}
 
+\paragraph{Limitations:}
+ Each configuration was run once, and each output was judged once by the same LLM. Therefore, it should be noted that the score differences between two individual runs should not be over-interpreted. The judge LLM scores are to be used to understand the overall trend and to identify the most common issues in both the approaches. The scores are not to be interpreted as an absolute measure of quality, but rather as a relative measure of the two approaches and their configurations.
+
 %-----------------------------------------------------------------------
 \subsubsection{Qualitative Analysis}\label{sec:results-qualitative}
 
-\paragraph{IMDb}\label{sec:results-imdb}
-The two IMDb output KGs, B2 (baseline) and G7 (GRASP), model the same entities: titles, persons, credits, episodes, and alternative titles. Both type each title with a class per title type, link credits to their title and person, link episodes to their series, and label every entity. The judge scores them 8.6 and 9.2; the two major issues of B2 concern its \texttt{Role} entities, which are built from the credit category (\texttt{actor}, \texttt{director}, \ldots), not from the role that is played. The differences that matter for querying are listed in Table~\ref{tab:imdb-diff}.
+As per the third level of our evaluation setup, we perform the usability assessment of the output KGs manually. However, since this would require significant manual effort, we perform this analysis only for the three main datasets: IMDb, Mondial, and MusicBrainz. For the five BIRD databases, we instead look at the major issues that the judge reported for each run.
 
+\paragraph{Examples of major issues on the BIRD databases:}
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Structure kept as literals.} In european\_football\_2, \texttt{Match} has eight text columns (\texttt{goal}, \texttt{shoton}, \texttt{shotoff}, \texttt{foulcommit}, \texttt{card}, \texttt{cross}, \texttt{corner}, \texttt{possession}) whose values are XML documents listing the events of the match. Both baseline runs keep each of them as one string literal per match, so goals, cards, and fouls never become entities and are never linked to their players and teams. GRASP without CQs models them.
+  \item \textbf{Predicates with several meanings.} In formula\_1, both baseline runs use a single predicate \texttt{f1:position} for the finishing position, the qualifying position, the championship position, and the position in a lap.
+  \item \textbf{Wrong entities.} In california\_schools, both baseline runs type the ten district-level rows of \texttt{schools} as \texttt{cs:School}, and additionally mint the same districts under a second IRI, so that each of these districts appears as two entities, one of them a school. The judge counts this as a major issue.
+  \item \textbf{Invented content.} In european\_football\_2, both baseline runs write the index of a lineup slot as \texttt{ef:shirtNumber}, although the source contains no shirt numbers.
+\end{itemize}
+The GRASP runs have fewer major issues, and they are of a different kind. For instance, in california\_schools, GRASP without CQs mints addresses and administrators as blank nodes, which are not stable across executions. With CQs, the issues reflect the narrowing described in the previous section.
+
+Some problems are shared by both approaches and point to the dataset rather than to the approach. In card\_games, all four runs model each printing of a card as \texttt{mtg:Card} and never introduce the abstract card that the printings share, so the list of sets in which a card was printed is attached to every printing. This is the main reason why card\_games has the lowest scores of the BIRD databases for both approaches.
+
+The following paragraphs present the usability assessment of IMDb, Mondial, and MusicBrainz.
+
+\paragraph{IMDb}\label{sec:results-imdb}
+The two IMDb output KGs, baseline and GRASP, model the same key entities: titles, persons, credits, key title types and alternative titles. Both type each title with a class per title type, link credits to their title and person, link episodes to their series, and label every entity. The baseline is scored 8.6 and the GRASP is scored 9.2. Table \ref{tab:imdb-diff} shows the key modeling differences between the two.
+
+\providecommand{\qc}[1]{{\footnotesize\texttt{#1}}}
 \begin{table}[!htbp]
   \centering
   \small
-  \renewcommand{\arraystretch}{1.4}
-  \begin{tabular}{p{2.3cm} p{6.0cm} p{5.0cm}}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabular}{l l l}
     \hline
-    & \textbf{B2 (baseline)} & \textbf{G7 (GRASP)} \\
+    & \textbf{Baseline} & \textbf{GRASP} \\
     \hline
-    Rating        & separate node: \texttt{?t imdb:hasRating ?r . ?r imdb:numVotes ?v} & on the title: \texttt{?t imdb:numVotes ?v} \\
-    Genre         & node: \texttt{?t imdb:hasGenre ?g . ?g rdfs:label ?genre} & literal: \texttt{?t imdb:genre ?genre} \\
-    Credit category & node: \texttt{?c imdb:role role:actor} & literal: \texttt{?c imdb:category "actor"} \\
-    Years         & \texttt{xsd:gYear} & \texttt{xsd:integer} \\
-    Namespace     & \texttt{http://example.org/imdb/} & \texttt{http://imdb.org/} \\
+    Rating          & separate \texttt{Rating} node      & on the title \\
+                    & \qc{?t imdb:hasRating ?r .}        & \qc{?t imdb:averageRating ?v} \\
+                    & \qc{?r imdb:averageRating ?v}           & \\ \addlinespace[4pt]
+    \hline
+    Genre           & node with a label                  & literal \\
+                    & \qc{?t imdb:hasGenre ?g .}         & \qc{?t imdb:genre ?genre} \\
+                    & \qc{?g rdfs:label ?genre}          & \\ \addlinespace[4pt]
+    \hline
+    Profession      & \texttt{Profession} node           & literal \\
+                    & \qc{?p imdb:hasProfession profession:actor} & \qc{?p imdb:profession "actor"} \\ \addlinespace[4pt]
+    \hline
+    Credit category & \texttt{Role} node, same labels as & literal \\
+                    & the \texttt{Profession} nodes      & \\
+                    & \qc{?c imdb:role role:actor}       & \qc{?c imdb:category "actor"} \\ \addlinespace[4pt]
+    % Years           & \qc{xsd:gYear}                     & \qc{xsd:integer} \\ \addlinespace[4pt]
+    \hline
+    Namespace       & \qc{http://example.org/imdb/}      & \qc{http://imdb.org/} \\
     \hline
   \end{tabular}
-  \caption{Modeling differences between the IMDb output KGs that affect querying.}
+  \caption{Key Modeling differences between the IMDb output KGs that affect querying.}
   \label{tab:imdb-diff}
 \end{table}
 
-To compare their usability, we wrote nine analytical questions, each as one SPARQL query per graph, and executed them on the output KGs of the evaluation graph \(G_D^{\mathit{pop}}\) (Section~\ref{sec:datasets}). The two queries of a question differ only where the vocabulary of the graphs differs, and they use the same pattern order. All 18 queries return the same answer as the gold SQL query on the same data. Table~\ref{tab:imdb-queries} shows the number of triple patterns of each query and its median runtime on QLever.
+% The judge reports the following major issues for the two KGs:
+% \begin{itemize}
+%   \item \textbf{Baseline:} \texttt{imdb:role} is filled from the column \texttt{category} of \texttt{title.principals}, so it holds the credit category (\texttt{actor}, \texttt{director}, \texttt{self}, \ldots), not the character that is played. The character is stored separately as \texttt{imdb:character}, so the predicate is misleading for every credit. In addition, the baseline creates \texttt{imdb:Profession} entities from \texttt{primaryProfession} of \texttt{name.basics}, such as \texttt{profession:actor} and \texttt{profession:director}. Since 11 of the 12 credit categories also occur as professions, an actor is linked to \texttt{profession:actor} directly and to \texttt{role:actor} through each credit: two unconnected entities with the same label, of which only the \texttt{Role} says who acted in a given title.
+%   \item \textbf{GRASP:} credits are modeled in two different ways. \texttt{title.crew} becomes direct \texttt{imdb:director} and \texttt{imdb:writer} edges on the title, while \texttt{title.principals} becomes \texttt{imdb:Credit} nodes, so a query over all credits of a title needs a \texttt{UNION}.
+% \end{itemize}
+% For the same reason, the class \texttt{imdb:Role} contains credit categories rather than roles.
+To compare their usability, we used nine analytical questions, wrote corresponding SPARQL queries, and executed them on the output KGs of the evaluation graph \(G_D^{\mathit{pop}}\) (Section~\ref{sec:datasets}). Table~\ref{tab:imdb-queries} shows the number of triple patterns of each query and its median runtime on QLever. 
+% The two queries of a question differ only where the vocabulary of the graphs differs, and they use the same pattern order. All 18 queries return the same answer as the gold SQL query on the same data. 
 % TODO: the gold-SQL check was done on the Oxigraph 1.25M-triple subset (without akas); confirm or re-run it on imdb_popular.nt.
 % NOTE: questions are renumbered Q1-Q9; in cases.yaml / runtimes.json they are 1-4 and 6-10.
 
@@ -477,10 +512,10 @@ To compare their usability, we wrote nine analytical questions, each as one SPAR
   \small
   \renewcommand{\arraystretch}{1.3}
   \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{c p{6.2cm} r r r r r}
+  \begin{tabular}{c >{\raggedright\arraybackslash}p{5.75cm} r r r r r}
     \hline
     & & \multicolumn{2}{c}{\textbf{Triple patterns}} & \multicolumn{2}{c}{\textbf{Median time (ms)}} & \\
-    \textbf{\#} & \textbf{Question} & \textbf{B2} & \textbf{G7} & \textbf{B2} & \textbf{G7} & \textbf{Speed-up} \\
+    \textbf{\#} & \textbf{Question} & \textbf{Baseline} & \textbf{GRASP} & \textbf{Baseline} & \textbf{GRASP} & \textbf{Speed-up} \\
     \hline
     Q1 & All genres, with their frequency and average rating        & 4  & 2  & 24  & 12  & 2.00 \\
     Q2 & Persons with the most votes on average (at least 3 movies) & 6  & 5  & 38  & 35  & 1.09 \\
@@ -499,70 +534,82 @@ To compare their usability, we wrote nine analytical questions, each as one SPAR
   \label{tab:imdb-queries}
 \end{table}
 
-G7 needs fewer or equally many triple patterns on every question, 46 against 55 in total, and its queries are faster or equally fast on every question, 237\,ms against 366\,ms in total. Both effects trace back to two modeling decisions.
-
-\subparagraph{Folding the ratings into the title.}
-In \(D\), \texttt{title.ratings} is in a one-to-one relationship with \texttt{title.basics}, and holds only the average rating and the number of votes. B2 keeps it as a separate \texttt{Rating} node, G7 attaches both values to the title. Every question that filters, groups, or ranks by votes or rating therefore needs one more join in B2, which applies to seven of the nine questions. In Q7, which looks up the rating twice, once to find the maximum per director and once to find the movie with that maximum, B2 pays this join twice and takes twice as long:
+GRASP needs fewer or equally many triple patterns on every question, and its queries are faster or equally fast on every question. 
+\subparagraph{Ratings on the title.}
+In \(D\), \texttt{title.ratings} is in a one-to-one relationship with \texttt{title.basics}, and holds only the average rating and the number of votes. Baseline keeps it as a separate \texttt{Rating} node and GRASP attaches both values to the title. So, every question that filters, groups, or ranks by votes or rating, needs one more join in baseline, which applies to seven of the nine questions. In Q7, which looks up the rating twice, once to find the maximum per director and once to find the movie with that maximum, baseline pays this join twice and takes twice as long:
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
-# G7
+# GRASP
 ?m a imdb:Movie ; imdb:director ?d ; imdb:averageRating ?r ; imdb:numVotes ?v .
-# B2
+# Baseline
 ?m a tt:movie ; imdb:director ?d ; imdb:hasRating ?rt .
 ?rt imdb:averageRating ?r ; imdb:numVotes ?v .
 \end{lstlisting}
 
 \subparagraph{Years as integers.}
-B2 types years as \texttt{xsd:gYear}, G7 as \texttt{xsd:integer}. The type of B2 is the more precise one, but SPARQL defines no arithmetic on \texttt{xsd:gYear}. In the three questions that compute an age (Q4, Q6, Q8), the natural expression \texttt{?y - ?b} silently returns no value on B2, without an error, and the query has to cast both years through a string:
+The baseline types years as \texttt{xsd:gYear}, GRASP as \texttt{xsd:integer}. The type of the baseline is the more precise one, but SPARQL defines no arithmetic on \texttt{xsd:gYear}. In the three questions that compute an age (Q4, Q6, Q8), the natural expression \texttt{?y - ?b} silently returns no value on the baseline, without an error, and the query has to cast both years through a string:
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
-# G7
+# GRASP
 SELECT ?name (MAX(?y - ?b) AS ?age) WHERE { ... }
-# B2
+# Baseline
 SELECT ?name (MAX(xsd:integer(STR(?y)) - xsd:integer(STR(?b))) AS ?age) WHERE { ... }
 \end{lstlisting}
-A user who writes the natural query on B2 receives an empty result, not a wrong one, and would have to know the datatype to find the reason.
+A user who writes the natural query on the baseline receives an empty result, not a wrong one, and would have to know the datatype to find the reason.
 
 \subparagraph{Code lists as nodes.}
-B2 turns genres and credit categories into nodes with their own type and label, G7 keeps them as literals. Nodes are the more expressive choice, since further information could be attached to a genre, but none of the nine questions benefits from it. Instead, B2 needs one more hop to reach the name of a genre (Q1), and the user has to know the IRI pattern of the categories (\texttt{role:actor}) to filter by them (Q6). In Q1, the two additional hops halve the speed.
+The baseline turns genres and credit categories into nodes with their own type and label and GRASP keeps them as literals. Nodes seem to be the more expressive choice, since further information could be attached to a genre, but none of the nine questions benefits from it. Instead, the baseline needs one more hop to reach the name of a genre (Q1), and the user has to know the IRI pattern of the categories (\texttt{role:actor}) to filter by them (Q6). 
+% In Q1, the two additional hops halve the speed.
+
+We also note that two node types overlap as well. The baseline builds \texttt{Profession} nodes from \texttt{primaryProfession} in \texttt{name.basics} and \texttt{Role} nodes from \texttt{category} in \texttt{title.principals}, two columns with largely the same values: 11 of the 12 categories, such as \texttt{actor} and \texttt{director}, also occur as professions. An actor is therefore linked to \texttt{profession:actor} directly and to \texttt{role:actor} through each credit, two unconnected nodes with the same label. A user who looks up ``actor'' by its label finds both, and has to know that only the \texttt{Role} node says who acted in a given title. The name \texttt{Role} is misleading as well, since it suggests the character that is played, which the baseline stores separately as \texttt{imdb:character}. GRASP keeps both values as literals on predicates named after their columns, \texttt{imdb:profession} and \texttt{imdb:category}, so the two meanings stay apart.
 
 \subparagraph{Equal cases.}
 For keyword search over titles (Q9), both graphs keep the primary title as \texttt{rdfs:label}, so the queries are identical and equally fast. Neither graph defines a class hierarchy, so ``series'' has to be expressed as two classes (\texttt{tvSeries} and \texttt{tvMiniSeries}) in both (Q5), and ``actor'' as two categories (\texttt{actor} and \texttt{actress}) in both (Q6).
 
-The absolute differences are small, at most 54\,ms on a graph of 2.5 million triples, but they are systematic: G7 is never slower, and the largest speed-ups occur in the questions with the most additional hops (Q1, Q6, Q7). Together with the judge scores, this shows that the more compact modeling of G7 is not only judged better, but also makes the graph simpler and faster to query.
+The absolute differences are small, at most 54\,ms on a graph of 2.5 million triples. We only note that the queries on the output KG from GRASP is never slower, and the largest speed-ups occur in the questions with the most additional hops (Q1, Q6, Q7). Together with the judge scores, this shows that the more compact modeling of GRASP is not only judged better, but also makes the graph simpler and faster to query for the set of analytical questions we used.
 
 \paragraph{Mondial}\label{sec:results-mondial}
-The two Mondial output KGs, B5 (baseline) and G5 (GRASP), model the same entities: countries, provinces, cities, organizations, and geographical features, with reified nodes for borders, memberships, and population observations. Both type and label their main entities. The judge scores them 8.6 and 8.9. The two major issues of B5 are that it models each country-specific share of a religion or ethnic group as an entity of its own, and that it types the decimal years of the sample (\texttt{1996.0}) as \texttt{xsd:gYear}, which is not a valid year. The one major issue of G5 is that entities created only as link targets, such as 261 provinces, never receive a type. The differences that matter for querying are listed in Table~\ref{tab:mondial-diff}.
+The two Mondial output KGs of the baseline and GRASP model the same entities: countries, provinces, cities, organizations, and geographical features, with reified nodes for borders, memberships, and population observations. Both type and label their main entities. The judge scores them 8.6 and 8.9. The two major issues of the baseline are that it models each country-specific share of a religion or ethnic group as an entity of its own, and that it types the decimal years of the sample (\texttt{1996.0}) as \texttt{xsd:gYear}, which is not a valid year. The one major issue of GRASP is that entities created only as link targets, such as 261 provinces, never receive a type. The differences that matter for querying are listed in Table~\ref{tab:mondial-diff}.
 
 \begin{table}[!htbp]
   \centering
   \small
-  \renewcommand{\arraystretch}{1.4}
-  \begin{tabular}{p{2.3cm} p{5.8cm} p{5.2cm}}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabular}{l l l}
     \hline
-    & \textbf{B5 (baseline)} & \textbf{G5 (GRASP)} \\
+    & \textbf{Baseline} & \textbf{GRASP} \\
     \hline
-    Economy, population, politics & separate node: \texttt{?e mond:country ?c ; mond:gdpMillionUSD ?g} & on the country: \texttt{?c ex:gdpMillionUSD ?g} \\
-    Continent, organization, language & reified node only: \texttt{?m mond:country ?c ; mond:organization ?o} & reified node and shortcut: \texttt{?c ex:memberOf ?o} \\
-    Borders & \texttt{Border} node and \texttt{?c mond:borders ?n} & \texttt{Border} node only: \texttt{?c ex:hasBorder ?b . ?b ex:country1 ?n} \\
-    Location of features & by role: \texttt{mond:sourceInProvince}, \texttt{mond:estuaryInProvince}, \texttt{mond:flowsThroughProvince} & one predicate \texttt{ex:province}, plus \texttt{ex:country} \\
-    Religion & literal on the share: \texttt{?a mond:religionName ?n} & shared node: \texttt{?a ex:religion ?r} \\
-    Years & \texttt{xsd:gYear} & \texttt{xsd:integer} \\
+    Economy, population,   & separate node per table        & on the country \\
+    politics               & \qc{?e mond:country ?c ;}      & \qc{?c ex:gdpMillionUSD ?g} \\
+                           & \qc{\ \ \ mond:gdpMillionUSD ?g} & \\ \addlinespace[4pt]
+    Continent, organization, & reified node only            & reified node and shortcut \\
+    language               & \qc{?m mond:country ?c ;}      & \qc{?c ex:memberOf ?o} \\
+                           & \qc{\ \ \ mond:organization ?o} & \\ \addlinespace[4pt]
+    Borders                & \texttt{Border} node and direct edge & \texttt{Border} node only \\
+                           & \qc{?c mond:borders ?n}        & \qc{?c ex:hasBorder ?b .} \\
+                           &                                & \qc{?b ex:country1 ?n} \\ \addlinespace[4pt]
+    Location of features   & one predicate per role         & one predicate for all roles \\
+                           & \qc{mond:sourceInProvince}     & \qc{ex:province} \\
+                           & \qc{mond:estuaryInProvince}    & \qc{ex:country} (direct) \\
+                           & \qc{mond:flowsThroughProvince} & \\ \addlinespace[4pt]
+    Religion               & name as a literal on the share & shared \texttt{Religion} node \\
+                           & \qc{?a mond:religionName ?n}   & \qc{?a ex:religion ?r} \\ \addlinespace[4pt]
+    Years                  & \qc{xsd:gYear}                 & \qc{xsd:integer} \\
     \hline
   \end{tabular}
   \caption{Modeling differences between the Mondial output KGs that affect querying.}
   \label{tab:mondial-diff}
 \end{table}
 
-On the sample, most countries keep only a few provinces, borders, and memberships, so rankings over them are meaningless. Since Mondial is small, we instead executed both query sets on the generic KG of the complete data (329{,}932 triples), which has the same layout as \(G_D\). This gives 295{,}266 triples for B5 and 254{,}525 for G5. On the sample, the same execution reproduces the delivered output KGs exactly. We wrote thirteen analytical questions, each as one SPARQL query per graph, following the same rules as for IMDb. All 25 queries return the same answer as the gold SQL query on the complete data; Q13 cannot be expressed on G5 (see below). Table~\ref{tab:mondial-queries} shows the number of triple patterns and the median runtime on QLever, measured as for IMDb.
+On the sample, most countries keep only a few provinces, borders, and memberships, so rankings over them are meaningless. Since Mondial is small, we instead executed both query sets on the generic KG of the complete data (329{,}932 triples), which has the same layout as \(G_D\). This gives 295{,}266 triples for the baseline and 254{,}525 for GRASP. On the sample, the same execution reproduces the delivered output KGs exactly. We wrote thirteen analytical questions, each as one SPARQL query per graph, following the same rules as for IMDb. All 25 queries return the same answer as the gold SQL query on the complete data; Q13 cannot be expressed on GRASP (see below). Table~\ref{tab:mondial-queries} shows the number of triple patterns and the median runtime on QLever, measured as for IMDb.
 
 \begin{table}[!htbp]
   \centering
   \small
   \renewcommand{\arraystretch}{1.3}
   \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{c p{6.2cm} r r r r r}
+  \begin{tabular}{c >{\raggedright\arraybackslash}p{5.6cm} r r r r r}
     \hline
     & & \multicolumn{2}{c}{\textbf{Triple patterns}} & \multicolumn{2}{c}{\textbf{Median time (ms)}} & \\
-    \textbf{\#} & \textbf{Question} & \textbf{B5} & \textbf{G5} & \textbf{B5} & \textbf{G5} & \textbf{Speed-up} \\
+    \textbf{\#} & \textbf{Question} & \textbf{Baseline} & \textbf{GRASP} & \textbf{Baseline} & \textbf{GRASP} & \textbf{Speed-up} \\
     \hline
     Q1  & Countries with the highest GDP per capita                  & 4  & 3  & 7  & 8  & 0.88 \\
     Q2  & Organizations with members on all six continents           & 5  & 3  & 10 & 11 & 0.91 \\
@@ -582,83 +629,92 @@ On the sample, most countries keep only a few provinces, borders, and membership
     Q13 & Rivers whose source and mouth lie in different countries   & 7  & --  & 15 & -- & -- \\
     \hline
   \end{tabular}
-  \caption[Analytical queries on the Mondial output KGs]{Analytical queries on the two Mondial output KGs, executed on the complete data: number of triple patterns and median of five cold-cache runs on QLever. Speed-up is the time of B5 divided by the time of G5; values below 1 mean that B5 is faster. \(^{*}\)~additionally needs two casts.}
+  \caption[Analytical queries on the Mondial output KGs]{Analytical queries on the two Mondial output KGs, executed on the complete data: number of triple patterns and median of five cold-cache runs on QLever. Speed-up is the time of the baseline divided by the time of GRASP; values below 1 mean that the baseline is faster. \(^{*}\)~additionally needs two casts.}
   \label{tab:mondial-queries}
 \end{table}
 
-G5 needs fewer triple patterns on six questions and B5 on two, 47 against 54 in total. On runtime, the picture is reversed: B5 is faster on seven of the twelve questions and in total, 111\,ms against 137\,ms. Most of these differences are 1--3\,ms, close to the fixed overhead of QLever on a graph of this size. The only large differences are Q10 and Q11, where B5 is four to five times faster. In contrast to IMDb, neither graph is better on all questions; each is better where it has materialized a shortcut.
+GRASP needs fewer triple patterns on six questions and the baseline on two, 47 against 54 in total. On runtime, the picture is reversed: the baseline is faster on seven of the twelve questions and in total, 111\,ms against 137\,ms. Most of these differences are 1--3\,ms, close to the fixed overhead of QLever on a graph of this size. The only large differences are Q10 and Q11, where the baseline is four to five times faster. In contrast to IMDb, neither graph is better on all questions; each is better where it has materialized a shortcut.
 
 \subparagraph{Folding the country statistics.}
-In \(D\), \texttt{Economy}, \texttt{Population}, and \texttt{Politics} are in a one-to-one relationship with \texttt{Country}. B5 keeps each as a separate node that points to the country through \texttt{mond:country}, G5 attaches their values to the country. G5 also adds direct shortcuts from the country to its continents, organizations, and languages, next to the reified membership nodes. Every question that starts from a country therefore needs one or two patterns less in G5 (Q1--Q5, Q8). Q8 shows the effect most clearly, since it combines two of the folded tables:
+In \(D\), \texttt{Economy}, \texttt{Population}, and \texttt{Politics} are in a one-to-one relationship with \texttt{Country}. The baseline keeps each as a separate node that points to the country through \texttt{mond:country}, GRASP attaches their values to the country. GRASP also adds direct shortcuts from the country to its continents, organizations, and languages, next to the reified membership nodes. Every question that starts from a country therefore needs one or two patterns less in GRASP (Q1--Q5, Q8). Q8 shows the effect most clearly, since it combines two of the folded tables:
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
-# G5
+# GRASP
 ?c ex:independenceDate ?d ; ex:gdpMillionUSD ?gdp ; ex:unemploymentPercent ?u .
-# B5
+# Baseline
 ?pi mond:independence ?d ; mond:country ?c .
 ?e mond:gdpMillionUSD ?gdp ; mond:unemploymentPercent ?u ; mond:country ?c .
 \end{lstlisting}
-On QLever, the additional joins cost little: G5 is at most 1.3 times faster on these questions, and on Q1 and Q2, B5 is even slightly faster.
+On QLever, the additional joins cost little: GRASP is at most 1.3 times faster on these questions, and on Q1 and Q2, the baseline is even slightly faster.
 
 \subparagraph{Borders between countries.}
-B5 materializes the symmetric relation \texttt{mond:borders} between two countries, in addition to the \texttt{Border} node that holds the border length. G5 keeps only the \texttt{Border} node, which names the two countries as \texttt{ex:country1} and \texttt{ex:country2}. To reach a neighbor in G5, a query has to go through the node, try both sides, and remove the start country. This is the largest difference in the set: B5 is 5.3 times faster on Q10, and 4.3 times faster on Q11, where the path is repeated in a transitive closure:
+The baseline materializes the symmetric relation \texttt{mond:borders} between two countries, in addition to the \texttt{Border} node that holds the border length. GRASP keeps only the \texttt{Border} node, which names the two countries as \texttt{ex:country1} and \texttt{ex:country2}. To reach a neighbor in GRASP, a query has to go through the node, try both sides, and remove the start country. This is the largest difference in the set: The baseline is 5.3 times faster on Q10, and 4.3 times faster on Q11, where the path is repeated in a transitive closure:
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
-# B5
+# Baseline
 <.../country/F> mond:borders+ ?x .
-# G5
+# GRASP
 <.../resource/country/F> (ex:hasBorder/(ex:country1|ex:country2))+ ?x .
 \end{lstlisting}
-Where the question is about the border itself, as in Q9 (border length per country), the effect is reversed: G5 reaches the borders of a country directly through \texttt{ex:hasBorder} and is 1.4 times faster.
+Where the question is about the border itself, as in Q9 (border length per country), the effect is reversed: GRASP reaches the borders of a country directly through \texttt{ex:hasBorder} and is 1.4 times faster.
 
 \subparagraph{Merged feature locations.}
-In \(D\), a river is linked to provinces through three tables: \texttt{geo\_Source}, \texttt{geo\_Estuary}, and \texttt{geo\_River}. B5 keeps the three roles as separate predicates. G5 reads all \texttt{geo\_*} tables in one query through a variable predicate, so all three become the same \texttt{ex:province} edge, and G5 adds the country of each province directly to the feature. This gives G5 a one-hop path from a feature to its countries (Q4, Q5), but it removes the distinction between source and mouth. Q13 therefore has no equivalent query on G5:
+In \(D\), a river is linked to provinces through three tables: \texttt{geo\_Source}, \texttt{geo\_Estuary}, and \texttt{geo\_River}. The baseline keeps the three roles as separate predicates. GRASP reads all \texttt{geo\_*} tables in one query through a variable predicate, so all three become the same \texttt{ex:province} edge, and GRASP adds the country of each province directly to the feature. This gives GRASP a one-hop path from a feature to its countries (Q4, Q5), but it removes the distinction between source and mouth. Q13 therefore has no equivalent query on GRASP:
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
-# B5
+# Baseline
 ?r mond:sourceInProvince ?ps ; mond:estuaryInProvince ?pe .
 ?ps mond:country ?cs . ?pe mond:country ?ce . FILTER(?cs != ?ce)
 \end{lstlisting}
-The information is present in \(D\), but not in the model, and a user of G5 cannot recover it.
+The information is present in \(D\), but not in the model, and a user of the GRASP graph cannot recover it.
 
 \subparagraph{Years and observation classes.}
-As in IMDb B2, B5 types years as \texttt{xsd:gYear}, so the yearly increase in Q7 needs \texttt{xsd:integer(STR(?y))} on both years. G5 uses \texttt{xsd:integer} and needs no cast. B5 is still faster on Q7 (21\,ms against 28\,ms), because it has a separate class for the population observations of countries, while G5 uses one class for countries, provinces, and cities and has to select the country observations through their subject.
+As on IMDb, the baseline types years as \texttt{xsd:gYear}, so the yearly increase in Q7 needs \texttt{xsd:integer(STR(?y))} on both years. GRASP uses \texttt{xsd:integer} and needs no cast. The baseline is still faster on Q7 (21\,ms against 28\,ms), because it has a separate class for the population observations of countries, while GRASP uses one class for countries, provinces, and cities and has to select the country observations through their subject.
 
 \subparagraph{Shared nodes.}
-G5 links each religion share to one shared \texttt{ex:Religion} node, which avoids the major issue of B5 and is the better model. When grouping by the name of the religion (Q12), however, it costs one hop more than the literal of B5. For the landlocked countries (Q6), both graphs need the same number of patterns.
+GRASP links each religion share to one shared \texttt{ex:Religion} node, which avoids the major issue of the baseline and is the better model. When grouping by the name of the religion (Q12), however, it costs one hop more than the literal of the baseline. For the landlocked countries (Q6), both graphs need the same number of patterns.
 
-Overall, the folded statistics and shortcuts make G5 simpler to query whenever a question starts from a country, and the materialized neighbor relation makes B5 faster for questions about the network of countries. The one question that only B5 can answer shows that a more compact model can also lose a distinction that a user needs. Together with the close judge scores, this shows that on Mondial, both approaches produce graphs of comparable usability, with different trade-offs.
+Overall, the folded statistics and shortcuts make the GRASP graph simpler to query whenever a question starts from a country, and the materialized neighbor relation makes the baseline graph faster for questions about the network of countries. The one question that only the baseline can answer shows that a more compact model can also lose a distinction that a user needs. Together with the close judge scores, this shows that on Mondial, both approaches produce graphs of comparable usability, with different trade-offs.
 
 \paragraph{MusicBrainz}\label{sec:results-musicbrainz}
-For MusicBrainz, the baseline produced no output, so we compare the GRASP output KG G9 with the generic KG \(G_D\) itself, which is what a user would have to query without semantic modeling. G9 models artists, releases, recordings, works, labels, areas, and their relationships, with artist credits as separate nodes. The judge scores it 6.7, with four major issues: editor collections are not modeled, the IPI and ISNI identifiers of labels never reach the graph, and the direct relationship predicates are named after the name of the link type, which is reused for different meanings and is emitted in the wrong direction for many link types. The differences to \(G_D\) that matter for querying are listed in Table~\ref{tab:mb-diff}.
+For MusicBrainz, the baseline produced no output, so we compare the GRASP output KG with the generic KG \(G_D\) itself, which is what a user would have to query without semantic modeling. GRASP models artists, releases, recordings, works, labels, areas, and their relationships, with artist credits as separate nodes. The judge scores it 6.7, with four major issues: editor collections are not modeled, the IPI and ISNI identifiers of labels never reach the graph, and the direct relationship predicates are named after the name of the link type, which is reused for different meanings and is emitted in the wrong direction for many link types. The differences to \(G_D\) that matter for querying are listed in Table~\ref{tab:mb-diff}.
 
 \begin{table}[!htbp]
   \centering
   \small
-  \renewcommand{\arraystretch}{1.4}
-  \begin{tabular}{p{2.3cm} p{6.4cm} p{4.6cm}}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabular}{l l l}
     \hline
-    & \textbf{\(G_D\) (generic KG)} & \textbf{G9 (GRASP)} \\
+    & \textbf{\(G_D\) (generic KG)} & \textbf{GRASP} \\
     \hline
-    Relationship & row of \texttt{l\_artist\_artist}, type through \texttt{link} and \texttt{link\_type}: \texttt{?l r:link ?k . ?k r:link\_type ?lt . ?lt lt:name "member of band"} & direct edge: \texttt{?m rel:member\_of\_band ?b}, plus a reified node \\
-    Attributes & per table: \texttt{artist:name}, \texttt{ref:artist/area} & shared: \texttt{rdfs:label}, \texttt{mb:area} \\
-    Dates & year, month, and day as integer columns & one literal: \texttt{xsd:gYear}, \texttt{xsd:gYearMonth}, or \texttt{xsd:date} \\
-    ISO code & separate \texttt{iso\_3166\_1} row & on the area: \texttt{mb:iso3166\_1} \\
-    Release country & \texttt{release\_country} \(\rightarrow\) \texttt{country\_area} \(\rightarrow\) \texttt{area} & \texttt{?event mb:country ?area} \\
+    Relationship    & row of \texttt{l\_artist\_artist}            & direct edge and reified node \\
+                    & \qc{?l r:link ?k .}                 & \qc{?m rel:member\_of\_band ?b} \\
+                    & \qc{?k r:link\_type ?lt .}          & \\
+                    & \qc{?lt lt:name "member of band"}   & \\ \addlinespace[4pt]
+    Attributes      & one predicate per table             & shared predicates \\
+                    & \qc{artist:name}, \qc{ref:artist/area} & \qc{rdfs:label}, \qc{mb:area} \\ \addlinespace[4pt]
+    Dates           & year, month, and day as integers    & one literal, typed by precision \\
+                    &                                     & \qc{xsd:gYear}, \qc{xsd:gYearMonth}, \\
+                    &                                     & or \qc{xsd:date} \\ \addlinespace[4pt]
+    ISO code        & separate \texttt{iso\_3166\_1} row  & on the area \\
+                    &                                     & \qc{mb:iso3166\_1} \\ \addlinespace[4pt]
+    Release country & through \texttt{country\_area}      & on the release event \\
+                    & \qc{release\_country} \(\rightarrow\) \qc{country\_area} & \qc{?event mb:country ?area} \\
+                    & \(\rightarrow\) \qc{area} & \\
     \hline
   \end{tabular}
   \caption{Modeling differences between the MusicBrainz generic KG and output KG that affect querying.}
   \label{tab:mb-diff}
 \end{table}
 
-As for IMDb, the sample is not suited for analytical questions: the artist table is sampled, so counts of artists per area or of members per band are incomplete. We therefore built a connected test graph from the complete dump with the same converter. It contains all rows of the 14 tables that the questions use: areas and their hierarchy, artists and their relationships, releases, release events, media, and the link rows and link types that the relationships use. It has 418{,}384 rows and 5{,}643{,}288 triples in the layout of \(G_D\). Executing the queries of G9 on it with QLever gives 2{,}665{,}382 triples. We wrote eleven analytical questions, each as one SPARQL query per graph. All 11 queries on \(G_D\) and 10 of the 11 on G9 return the same answer as the gold SQL query; Q8 on G9 misses 19 of 28{,}018 rows (see below). Table~\ref{tab:mb-queries} shows the number of triple patterns and the median runtime on QLever, measured as for IMDb.
+As for IMDb, the sample is not suited for analytical questions: the artist table is sampled, so counts of artists per area or of members per band are incomplete. We therefore built a connected test graph from the complete dump with the same converter. It contains all rows of the 14 tables that the questions use: areas and their hierarchy, artists and their relationships, releases, release events, media, and the link rows and link types that the relationships use. It has 418{,}384 rows and 5{,}643{,}288 triples in the layout of \(G_D\). Executing the queries of GRASP on it with QLever gives 2{,}665{,}382 triples. We wrote eleven analytical questions, each as one SPARQL query per graph. All 11 queries on \(G_D\) and 10 of the 11 on GRASP return the same answer as the gold SQL query; Q8 on GRASP misses 19 of 28{,}018 rows (see below). Table~\ref{tab:mb-queries} shows the number of triple patterns and the median runtime on QLever, measured as for IMDb.
 
 \begin{table}[!htbp]
   \centering
   \small
   \renewcommand{\arraystretch}{1.3}
   \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{c p{6.2cm} r r r r r}
+  \begin{tabular}{c >{\raggedright\arraybackslash}p{6.2cm} r r r r r}
     \hline
     & & \multicolumn{2}{c}{\textbf{Triple patterns}} & \multicolumn{2}{c}{\textbf{Median time (ms)}} & \\
-    \textbf{\#} & \textbf{Question} & \(\boldsymbol{G_D}\) & \textbf{G9} & \(\boldsymbol{G_D}\) & \textbf{G9} & \textbf{Speed-up} \\
+    \textbf{\#} & \textbf{Question} & \(\boldsymbol{G_D}\) & \textbf{GRASP} & \(\boldsymbol{G_D}\) & \textbf{GRASP} & \textbf{Speed-up} \\
     \hline
     Q1  & Bands with the most members                                  & 6  & 2  & 41  & 19  & 2.16 \\
     Q2  & Youngest band members at the time they joined                & 9  & 8\(^{*}\) & 52 & 36 & 1.44 \\
@@ -675,46 +731,46 @@ As for IMDb, the sample is not suited for analytical questions: the artist table
         & \textbf{Total}                                               & \textbf{69} & \textbf{51} & \textbf{614} & \textbf{742} & \textbf{0.83} \\
     \hline
   \end{tabular}
-  \caption[Analytical queries on the MusicBrainz KGs]{Analytical queries on the MusicBrainz generic KG and output KG, executed on the connected test graph: number of triple patterns and median of five cold-cache runs on QLever. Speed-up is the time of \(G_D\) divided by the time of G9; values below 1 mean that \(G_D\) is faster. \(^{*}\)~additionally needs a cast of each date. \(^{\dagger}\)~incomplete answer.}
+  \caption[Analytical queries on the MusicBrainz KGs]{Analytical queries on the MusicBrainz generic KG and output KG, executed on the connected test graph: number of triple patterns and median of five cold-cache runs on QLever. Speed-up is the time of \(G_D\) divided by the time of GRASP; values below 1 mean that \(G_D\) is faster. \(^{*}\)~additionally needs a cast of each date. \(^{\dagger}\)~incomplete answer.}
   \label{tab:mb-queries}
 \end{table}
 
-G9 needs fewer triple patterns on five questions and more on one, 51 against 69 in total. It is faster on six questions, but slower in total, 742\,ms against 614\,ms, because of Q7 alone; without Q7, G9 takes 219\,ms against 585\,ms. The differences trace back to four modeling decisions.
+GRASP needs fewer triple patterns on five questions and more on one, 51 against 69 in total. It is faster on six questions, but slower in total, 742\,ms against 614\,ms, because of Q7 alone; without Q7, GRASP takes 219\,ms against 585\,ms. The differences trace back to four modeling decisions.
 
 \subparagraph{Direct relationship edges.}
-In \(G_D\), a relationship is a row of an \texttt{l\_*} table, and its type is reached through the \texttt{link} row and its \texttt{link\_type}. G9 keeps this row as a reified node, but additionally emits a direct edge between the two entities, named after the link type. A question about a typed relationship therefore becomes a single pattern:
+In \(G_D\), a relationship is a row of an \texttt{l\_*} table, and its type is reached through the \texttt{link} row and its \texttt{link\_type}. GRASP keeps this row as a reified node, but additionally emits a direct edge between the two entities, named after the link type. A question about a typed relationship therefore becomes a single pattern:
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
-# G9
+# GRASP
 ?m rel:member_of_band ?b .
 # G_D
 ?lt lt:name "member of band" . ?k r_link:link_type ?lt .
 ?l r_lar:link ?k ; r_lar:entity0 ?m ; r_lar:entity1 ?b .
 \end{lstlisting}
-This saves the most where a question follows several relationships. Q5 goes down the area hierarchy twice, and G9 needs half the patterns and is 12 times faster. On Q1 and Q4, G9 is two to three times faster. Q2 also needs the date on which the member joined, which is a property of the relationship, so G9 has to use the reified node and saves only one pattern.
+This saves the most where a question follows several relationships. Q5 goes down the area hierarchy twice, and GRASP needs half the patterns and is 12 times faster. On Q1 and Q4, GRASP is two to three times faster. Q2 also needs the date on which the member joined, which is a property of the relationship, so GRASP has to use the reified node and saves only one pattern.
 
 \subparagraph{Direction of the relationship edges.}
-The direct edge always goes from the first entity of a relationship row to the second, and is named after the \texttt{name} of the link type, not after its directional \texttt{link\_phrase}. For areas, the first entity is the parent, so G9 states that \texttt{"United States" rel:part\_of "Virginia"}. The queries for the area questions (Q4--Q7) therefore have to be written backwards, against the meaning of the predicate:
+The direct edge always goes from the first entity of a relationship row to the second, and is named after the \texttt{name} of the link type, not after its directional \texttt{link\_phrase}. For areas, the first entity is the parent, so GRASP states that \texttt{"United States" rel:part\_of "Virginia"}. The queries for the area questions (Q4--Q7) therefore have to be written backwards, against the meaning of the predicate:
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
-# G9: the subdivision ?s "is part of" the city ?c
+# GRASP: the subdivision ?s "is part of" the city ?c
 ?s rel:part_of ?c ; mb:areaType ?st . ?st rdfs:label "Subdivision" .
 \end{lstlisting}
 The natural query, \texttt{?city rel:part\_of ?state}, finds one pair of a city and a subdivision instead of 805, without an error. This is the major issue that the judge reports under C4. The answers in Table~\ref{tab:mb-queries} are correct only because we inverted the direction.
 
 \subparagraph{Shared predicates.}
-G9 uses one predicate for the same attribute of different entity types, such as \texttt{mb:area} for artists, labels, and places, and \texttt{rdfs:label} for all entities. A query on artists then needs an additional type pattern, and the engine has to scan more triples. This makes the lookups Q3, Q9, and Q11 1.4 to 1.9 times slower than on the table-specific predicates of \(G_D\). In Q7, which combines the area of an artist with the transitive area hierarchy, G9 is 18 times slower. Most of this is caused by the plan that QLever chooses for a transitive path that is joined from both sides: when the closure is computed in a subquery first, the same question takes 30\,ms on \(G_D\) and 37\,ms on G9.
+GRASP uses one predicate for the same attribute of different entity types, such as \texttt{mb:area} for artists, labels, and places, and \texttt{rdfs:label} for all entities. A query on artists then needs an additional type pattern, and the engine has to scan more triples. This makes the lookups Q3, Q9, and Q11 1.4 to 1.9 times slower than on the table-specific predicates of \(G_D\). In Q7, which combines the area of an artist with the transitive area hierarchy, GRASP is 18 times slower. Most of this is caused by the plan that QLever chooses for a transitive path that is joined from both sides: when the closure is computed in a subquery first, the same question takes 30\,ms on \(G_D\) and 37\,ms on GRASP.
 
 \subparagraph{Dates as one literal.}
-\(G_D\) keeps the year, month, and day of a date as three integer columns. G9 combines them into one literal, whose type depends on the precision: \texttt{xsd:gYear}, \texttt{xsd:gYearMonth}, or \texttt{xsd:date}. Every question that computes with years must first cut the year out of the string (Q2, Q8, Q9):
+\(G_D\) keeps the year, month, and day of a date as three integer columns. GRASP combines them into one literal, whose type depends on the precision: \texttt{xsd:gYear}, \texttt{xsd:gYearMonth}, or \texttt{xsd:date}. Every question that computes with years must first cut the year out of the string (Q2, Q8, Q9):
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
 # G_D
 SELECT ?name ((?died - ?born) AS ?years) WHERE { ... }
-# G9
+# GRASP
 SELECT ?name ((xsd:integer(SUBSTR(STR(?died), 1, 4))
              - xsd:integer(SUBSTR(STR(?born), 1, 4))) AS ?years) WHERE { ... }
 \end{lstlisting}
-G9 also chooses the type by the length of the combined string (4, 7, or 10 characters). A year with fewer than four digits gives a string of a different length, and the whole date is dropped. In the test graph, this affects 26 artists, and 19 rows of the answer to Q8 are missing.
+GRASP also chooses the type by the length of the combined string (4, 7, or 10 characters). A year with fewer than four digits gives a string of a different length, and the whole date is dropped. In the test graph, this affects 26 artists, and 19 rows of the answer to Q8 are missing.
 
 \subparagraph{Equal cases.}
-For the release events per country (Q10), G9 links the event directly to the area and skips the \texttt{country\_area} table of \(G_D\), which saves one pattern. For the areas inside each country (Q6), both graphs need one transitive path and are equally fast.
+For the release events per country (Q10), GRASP links the event directly to the area and skips the \texttt{country\_area} table of \(G_D\), which saves one pattern. For the areas inside each country (Q6), both graphs need one transitive path and are equally fast.
 
-Overall, G9 is simpler and faster to query than \(G_D\) for the part of MusicBrainz that \(G_D\) makes hardest: typed relationships, which need two additional hops per relationship in \(G_D\). It is not uniformly better, however. Its shared predicates make lookups slower, its date encoding forces casts and loses dates, and its reversed relationship edges return wrong answers to the natural query without an error. This is consistent with the low judge score: the modeling of G9 makes the central relationships easy to query, but its errors are of a kind that a user cannot detect from the results.
+Overall, GRASP is simpler and faster to query than \(G_D\) for the part of MusicBrainz that \(G_D\) makes hardest: typed relationships, which need two additional hops per relationship in \(G_D\). It is not uniformly better, however. Its shared predicates make lookups slower, its date encoding forces casts and loses dates, and its reversed relationship edges return wrong answers to the natural query without an error. This is consistent with the low judge score: its modeling makes the central relationships easy to query, but its errors are of a kind that a user cannot detect from the results.

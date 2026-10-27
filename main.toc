@@ -1,0 +1,99 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{1}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Motivation}{1}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Problem Statement}{2}{subsection.1.2}%
+\contentsline {paragraph}{Task:}{4}{section*.9}%
+\contentsline {paragraph}{Criteria:}{5}{section*.10}%
+\contentsline {subparagraph}{Semantic Modeling:}{5}{section*.11}%
+\contentsline {subparagraph}{Fidelity:}{5}{section*.12}%
+\contentsline {subparagraph}{Usability:}{6}{section*.13}%
+\contentsline {paragraph}{Research questions:}{6}{section*.14}%
+\contentsline {paragraph}{Scope:}{6}{section*.15}%
+\contentsline {section}{\numberline {2}Related Work}{7}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Conventional Approaches}{7}{subsection.2.1}%
+\contentsline {subsubsection}{\numberline {2.1.1}Direct Mapping}{7}{subsubsection.2.1.1}%
+\contentsline {subsubsection}{\numberline {2.1.2}Declarative Mappings}{7}{subsubsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.2}LLM-Based Knowledge Graph Construction}{8}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Direct Triple Extraction}{8}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Mapping Generation}{9}{subsubsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.3}Competency-Question-Driven Modeling}{10}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Evaluation in Related Work}{12}{subsection.2.4}%
+\contentsline {section}{\numberline {3}Background}{13}{section.3}%
+\contentsline {subsection}{\numberline {3.1}SPARQL CONSTRUCT Queries}{13}{subsection.3.1}%
+\contentsline {paragraph}{Execution:}{14}{section*.17}%
+\contentsline {paragraph}{Caveats:}{15}{section*.18}%
+\contentsline {subsection}{\numberline {3.2}LLM Agents and Tool Calling}{16}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}GRASP}{16}{subsection.3.3}%
+\contentsline {paragraph}{Tools:}{16}{section*.19}%
+\contentsline {paragraph}{Shapes:}{17}{section*.20}%
+\contentsline {paragraph}{Notes:}{17}{section*.22}%
+\contentsline {section}{\numberline {4}Approach}{18}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Structured Data to Generic KG}{19}{subsection.4.1}%
+\contentsline {paragraph}{Mapping:}{19}{section*.25}%
+\contentsline {paragraph}{Conversion Practices:}{20}{section*.27}%
+\contentsline {subsection}{\numberline {4.2}Preparing the Generic KG}{22}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Generating CONSTRUCT Queries}{22}{subsection.4.3}%
+\contentsline {paragraph}{Generation agent:}{23}{section*.29}%
+\contentsline {paragraph}{Rules:}{24}{section*.30}%
+\contentsline {paragraph}{Generation Agent Tools:}{24}{section*.31}%
+\contentsline {paragraph}{Review agent:}{26}{section*.32}%
+\contentsline {paragraph}{Computing source coverage.}{26}{section*.33}%
+\contentsline {paragraph}{Checklist.}{27}{section*.34}%
+\contentsline {paragraph}{Verdict and review loop.}{28}{section*.35}%
+\contentsline {paragraph}{Output.}{29}{section*.36}%
+\contentsline {subsection}{\numberline {4.4}Baseline}{29}{subsection.4.4}%
+\contentsline {paragraph}{Task and input:}{29}{section*.37}%
+\contentsline {paragraph}{Prompt:}{29}{section*.38}%
+\contentsline {paragraph}{Differences to our approach:}{30}{section*.39}%
+\contentsline {section}{\numberline {5}Evaluation}{31}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Datasets}{31}{subsection.5.1}%
+\contentsline {subsubsection}{\numberline {5.1.1}IMDb}{31}{subsubsection.5.1.1}%
+\contentsline {subsubsection}{\numberline {5.1.2}Mondial}{32}{subsubsection.5.1.2}%
+\contentsline {subsubsection}{\numberline {5.1.3}MusicBrainz}{34}{subsubsection.5.1.3}%
+\contentsline {subsubsection}{\numberline {5.1.4}BIRD-SQL Databases}{35}{subsubsection.5.1.4}%
+\contentsline {paragraph}{Competency questions:}{36}{section*.41}%
+\contentsline {subsection}{\numberline {5.2}Setup}{37}{subsection.5.2}%
+\contentsline {paragraph}{Syntactic validity:}{37}{section*.42}%
+\contentsline {paragraph}{LLM-as-a-judge:}{37}{section*.43}%
+\contentsline {paragraph}{Qualitative analysis:}{39}{section*.45}%
+\contentsline {subsection}{\numberline {5.3}Results}{40}{subsection.5.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}Syntactic Validity}{40}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}LLM-as-a-Judge Scores}{41}{subsubsection.5.3.2}%
+\contentsline {paragraph}{GRASP versus Baseline (RQ2):}{41}{section*.49}%
+\contentsline {paragraph}{Effect of competency questions (RQ3):}{42}{section*.50}%
+\contentsline {paragraph}{Schema size and complexity (RQ4):}{43}{section*.51}%
+\contentsline {paragraph}{Limitations:}{45}{section*.53}%
+\contentsline {subsubsection}{\numberline {5.3.3}Qualitative Analysis}{45}{subsubsection.5.3.3}%
+\contentsline {paragraph}{Examples of major issues on the BIRD databases:}{45}{section*.54}%
+\contentsline {paragraph}{IMDb}{46}{section*.55}%
+\contentsline {subparagraph}{Folding the ratings into the title.}{47}{section*.58}%
+\contentsline {subparagraph}{Years as integers.}{48}{section*.59}%
+\contentsline {subparagraph}{Code lists as nodes.}{48}{section*.60}%
+\contentsline {subparagraph}{Equal cases.}{49}{section*.61}%
+\contentsline {paragraph}{Mondial}{49}{section*.62}%
+\contentsline {subparagraph}{Folding the country statistics.}{50}{section*.65}%
+\contentsline {subparagraph}{Borders between countries.}{50}{section*.66}%
+\contentsline {subparagraph}{Merged feature locations.}{52}{section*.67}%
+\contentsline {subparagraph}{Years and observation classes.}{52}{section*.68}%
+\contentsline {subparagraph}{Shared nodes.}{52}{section*.69}%
+\contentsline {paragraph}{MusicBrainz}{53}{section*.70}%
+\contentsline {subparagraph}{Direct relationship edges.}{54}{section*.73}%
+\contentsline {subparagraph}{Direction of the relationship edges.}{55}{section*.74}%
+\contentsline {subparagraph}{Shared predicates.}{55}{section*.75}%
+\contentsline {subparagraph}{Dates as one literal.}{55}{section*.76}%
+\contentsline {subparagraph}{Equal cases.}{56}{section*.77}%
+\contentsline {section}{\numberline {6}Conclusion}{57}{section.6}%
+\contentsline {paragraph}{RQ1:}{57}{section*.78}%
+\contentsline {paragraph}{RQ2:}{57}{section*.79}%
+\contentsline {paragraph}{RQ3:}{57}{section*.80}%
+\contentsline {paragraph}{RQ4:}{57}{section*.81}%
+\contentsline {paragraph}{Limitations:}{58}{section*.82}%
+\contentsline {paragraph}{Future work:}{58}{section*.83}%
+\contentsline {section}{List of Figures}{I}{section*.84}%
+\contentsline {section}{List of Tables}{II}{section*.85}%
+\contentsline {section}{Bibliography}{III}{section*.86}%
+\contentsline {section}{Appendix}{VIII}{section*.86}%
+\contentsline {paragraph}{Generation agent:}{VIII}{section*.88}%
+\contentsline {paragraph}{Review agent:}{X}{section*.89}%
+\contentsline {paragraph}{Baseline:}{XII}{section*.90}%
+\contentsline {paragraph}{LLM judge:}{XII}{section*.91}%

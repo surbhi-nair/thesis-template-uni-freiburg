@@ -1,0 +1,9 @@
+\babel@toc {english}{}\relax 
+\contentsline {figure}{\numberline {1}{\ignorespaces Three tables of the IMDb dataset with selected columns.}}{2}{figure.caption.6}%
+\contentsline {figure}{\numberline {2}{\ignorespaces The generic KG of the IMDb tables (top) and a semantic KG of the same data (bottom).}}{3}{figure.caption.7}%
+\contentsline {figure}{\numberline {3}{\ignorespaces The query ``Who directed \emph {Heat}?'' over the generic KG (bottom left) and over the semantic KG (bottom right).}}{3}{figure.caption.8}%
+\contentsline {figure}{\numberline {4}{\ignorespaces A CONSTRUCT query over a sample RDF KG}}{13}{figure.caption.16}%
+\contentsline {figure}{\numberline {5}{\ignorespaces GRASP sample shape format for one class}}{17}{figure.caption.21}%
+\contentsline {figure}{\numberline {6}{\ignorespaces GRASP sample structural notes}}{17}{figure.caption.23}%
+\contentsline {figure}{\numberline {7}{\ignorespaces Overview of generic-to-semantic KG pipeline}}{18}{figure.caption.24}%
+\contentsline {figure}{\numberline {8}{\ignorespaces Generation and review of CONSTRUCT queries.}}{23}{figure.caption.28}%

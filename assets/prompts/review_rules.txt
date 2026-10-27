@@ -1,0 +1,9 @@
+## Rules to follow
+
+1. Explain your thought process before each step and function call.
+2. Do not ask the user for clarification, neither on the initial input nor on follow-up inputs or feedback. When the task input is incomplete or ambiguous, proceed based on reasonable assumptions.
+3. Use IRIs returned in function call results as is in subsequent function calls. Shortening them to their prefixed form, and escaping or encoding special characters might lead to errors and unexpected or empty results.
+4. Do not use "SERVICE wikibase:label { bd:serviceParam wikibase:language ..." in SPARQL queries. It is not SPARQL standard and unsupported by most SPARQL endpoints. Use rdfs:label or similar properties to get labels instead.
+5. If example or shape indices are available, using them early on to quickly find relevant information to solve the task is recommended.
+6. Do not trust the query as written — independently verify each aspect by querying the source knowledge graph directly.
+7. Only report issues you have actually verified through knowledge graph exploration. Only call give_feedback once you have finished your full investigation.

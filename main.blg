@@ -1,0 +1,72 @@
+This is BibTeX, Version 0.99d (TeX Live 2024)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+A level-1 auxiliary file: sections/cover.aux
+A level-1 auxiliary file: sections/information.aux
+A level-1 auxiliary file: sections/declaration_english.aux
+A level-1 auxiliary file: sections/aiusage_english.aux
+A level-1 auxiliary file: sections/acknowledgements.aux
+A level-1 auxiliary file: sections/quote.aux
+A level-1 auxiliary file: sections/abstract.aux
+A level-1 auxiliary file: sections/table_of_contents.aux
+A level-1 auxiliary file: sections/introduction.aux
+A level-1 auxiliary file: sections/related_work.aux
+A level-1 auxiliary file: sections/background.aux
+A level-1 auxiliary file: sections/approach.aux
+A level-1 auxiliary file: sections/experiments.aux
+A level-1 auxiliary file: sections/conclusion.aux
+A level-1 auxiliary file: sections/figures.aux
+A level-1 auxiliary file: sections/tables.aux
+A level-1 auxiliary file: sections/abbreviations.aux
+A level-1 auxiliary file: sections/references.aux
+The style file: plainnat.bst
+A level-1 auxiliary file: sections/appendix.aux
+Database file #1: references/motivation.bib
+Database file #2: references/problem_statement.bib
+Database file #3: references/related_work.bib
+Database file #4: references/background.bib
+Database file #5: references/approach.bib
+Database file #6: references/experiments.bib
+Warning--empty year in tarql
+You've used 37 entries,
+            2773 wiz_defined-function locations,
+            819 strings with 14394 characters,
+and the built_in function-call counts, 19557 in all, are:
+= -- 1671
+> -- 1411
+< -- 29
++ -- 474
+- -- 437
+* -- 1580
+:= -- 3007
+add.period$ -- 128
+call.type$ -- 37
+change.case$ -- 254
+chr.to.int$ -- 37
+cite$ -- 75
+duplicate$ -- 849
+empty$ -- 1441
+format.name$ -- 491
+if$ -- 4124
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 28
+newline$ -- 205
+num.names$ -- 150
+pop$ -- 561
+preamble$ -- 1
+purify$ -- 216
+quote$ -- 0
+skip$ -- 709
+stack$ -- 0
+substring$ -- 425
+swap$ -- 145
+text.length$ -- 14
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 407
+warning$ -- 1
+while$ -- 145
+width$ -- 0
+write$ -- 503
+(There was 1 warning)
