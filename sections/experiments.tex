@@ -555,7 +555,7 @@ SELECT ?name (MAX(xsd:integer(STR(?y)) - xsd:integer(STR(?b))) AS ?age) WHERE { 
 \end{lstlisting}
 A user who writes the natural query on the baseline receives an empty result, not a wrong one, and would have to know the datatype to find the reason.
 
-\subparagraph{Code lists as nodes.}
+\subparagraph{Catgeorical values as nodes.}
 The baseline turns genres and credit categories into nodes with their own type and label and GRASP keeps them as literals. Nodes seem to be the more expressive choice, since further information could be attached to a genre, but none of the nine questions benefits from it. Instead, the baseline needs one more hop to reach the name of a genre (Q1), and the user has to know the IRI pattern of the categories (\texttt{role:actor}) to filter by them (Q6). 
 % In Q1, the two additional hops halve the speed.
 
@@ -567,7 +567,8 @@ For keyword search over titles (Q9), both graphs keep the primary title as \text
 The absolute differences are small, at most 54\,ms on a graph of 2.5 million triples. We only note that the queries on the output KG from GRASP is never slower, and the largest speed-ups occur in the questions with the most additional hops (Q1, Q6, Q7). Together with the judge scores, this shows that the more compact modeling of GRASP is not only judged better, but also makes the graph simpler and faster to query for the set of analytical questions we used.
 
 \paragraph{Mondial}\label{sec:results-mondial}
-The two Mondial output KGs of the baseline and GRASP model the same entities: countries, provinces, cities, organizations, and geographical features, with reified nodes for borders, memberships, and population observations. Both type and label their main entities. The judge scores them 8.6 and 8.9. The two major issues of the baseline are that it models each country-specific share of a religion or ethnic group as an entity of its own, and that it types the decimal years of the sample (\texttt{1996.0}) as \texttt{xsd:gYear}, which is not a valid year. The one major issue of GRASP is that entities created only as link targets, such as 261 provinces, never receive a type. The differences that matter for querying are listed in Table~\ref{tab:mondial-diff}.
+The two Mondial output KGs of the baseline and GRASP model the same entities: countries, provinces, cities, organizations, and geographical features, with reified nodes for borders, memberships, and population observations. Both type and label their main entities. The judge scores them 8.6 and 8.9 respectively. The key differences are listed in Table~\ref{tab:mondial-diff}.
+% The two major issues of the baseline are that it models each country-specific share of a religion or ethnic group as an entity of its own, and that it types the decimal years of the sample (\texttt{1996.0}) as \texttt{xsd:gYear}, which is not a valid year. The one major issue of GRASP is that entities created only as link targets, such as 261 provinces, never receive a type.
 
 \begin{table}[!htbp]
   \centering
@@ -595,11 +596,13 @@ The two Mondial output KGs of the baseline and GRASP model the same entities: co
     Years                  & \qc{xsd:gYear}                 & \qc{xsd:integer} \\
     \hline
   \end{tabular}
-  \caption{Modeling differences between the Mondial output KGs that affect querying.}
+  \caption{Modeling differences between the Mondial output KGs.}
   \label{tab:mondial-diff}
 \end{table}
 
-On the sample, most countries keep only a few provinces, borders, and memberships, so rankings over them are meaningless. Since Mondial is small, we instead executed both query sets on the generic KG of the complete data (329{,}932 triples), which has the same layout as \(G_D\). This gives 295{,}266 triples for the baseline and 254{,}525 for GRASP. On the sample, the same execution reproduces the delivered output KGs exactly. We wrote thirteen analytical questions, each as one SPARQL query per graph, following the same rules as for IMDb. All 25 queries return the same answer as the gold SQL query on the complete data; Q13 cannot be expressed on GRASP (see below). Table~\ref{tab:mondial-queries} shows the number of triple patterns and the median runtime on QLever, measured as for IMDb.
+% On the sample, most countries keep only a few provinces, borders, and memberships, so rankings over them are meaningless. 
+% This gives 295{,}266 triples for the baseline and 254{,}525 for GRASP.
+Since Mondial is small, we executed both query sets on the generic KG of the complete data (329{,}932 triples). We used eleven analytical questions, wrote corresponding SPARQL query per graph and executed them on both graphs. Table~\ref{tab:mondial-queries} shows the number of triple patterns and the median runtime on QLever for each query.
 
 \begin{table}[!htbp]
   \centering
@@ -622,21 +625,18 @@ On the sample, most countries keep only a few provinces, borders, and membership
     Q9  & Total land-border length per country                       & 3  & 3  & 10 & 7  & 1.43 \\
     Q10 & Countries with the most neighbors                          & 2  & 3  & 3  & 16 & 0.19 \\
     Q11 & All countries reachable over land from France              & 2  & 2  & 3  & 13 & 0.23 \\
-    Q12 & Religions that are the majority in the most countries      & 2  & 3  & 4  & 7  & 0.57 \\
     \hline
-        & \textbf{Total (Q1--Q12)}                                    & \textbf{54} & \textbf{47} & \textbf{111} & \textbf{137} & \textbf{0.81} \\
-    \hline
-    Q13 & Rivers whose source and mouth lie in different countries   & 7  & --  & 15 & -- & -- \\
+        & \textbf{Total}                                              & \textbf{52} & \textbf{44} & \textbf{107} & \textbf{130} & \textbf{0.82} \\
     \hline
   \end{tabular}
-  \caption[Analytical queries on the Mondial output KGs]{Analytical queries on the two Mondial output KGs, executed on the complete data: number of triple patterns and median of five cold-cache runs on QLever. Speed-up is the time of the baseline divided by the time of GRASP; values below 1 mean that the baseline is faster. \(^{*}\)~additionally needs two casts.}
+  \caption[Analytical queries on the Mondial output KGs]{Analytical queries on the two Mondial output KGs. Speed-up is the time of the baseline divided by the time of GRASP; values below 1 mean that the baseline is faster. \(^{*}\)~additionally needs two casts.}
   \label{tab:mondial-queries}
 \end{table}
 
-GRASP needs fewer triple patterns on six questions and the baseline on two, 47 against 54 in total. On runtime, the picture is reversed: the baseline is faster on seven of the twelve questions and in total, 111\,ms against 137\,ms. Most of these differences are 1--3\,ms, close to the fixed overhead of QLever on a graph of this size. The only large differences are Q10 and Q11, where the baseline is four to five times faster. In contrast to IMDb, neither graph is better on all questions; each is better where it has materialized a shortcut.
-
-\subparagraph{Folding the country statistics.}
-In \(D\), \texttt{Economy}, \texttt{Population}, and \texttt{Politics} are in a one-to-one relationship with \texttt{Country}. The baseline keeps each as a separate node that points to the country through \texttt{mond:country}, GRASP attaches their values to the country. GRASP also adds direct shortcuts from the country to its continents, organizations, and languages, next to the reified membership nodes. Every question that starts from a country therefore needs one or two patterns less in GRASP (Q1--Q5, Q8). Q8 shows the effect most clearly, since it combines two of the folded tables:
+GRASP needs fewer triple patterns on six questions and the baseline on one. On runtime, the baseline is faster on six of the eleven questions. Most of these differences are 1--3\,ms. The only large differences are Q10 and Q11, where the baseline is four to five times faster. In contrast to IMDb, neither graph is better on all questions; each is better where it has materialized a shortcut for that particular question.
+% , close to the fixed overhead of QLever on a graph of this size
+\subparagraph{Country statistics as properties of the country.}
+In \(D\), \texttt{Economy}, \texttt{Population}, and \texttt{Politics} are in a one-to-one relationship with \texttt{Country}. The baseline keeps each as a separate node that points to the country through \texttt{mond:country}, GRASP attaches their values to the country. GRASP also adds direct shortcuts from the country to its continents, organizations, and languages, next to the reified membership nodes. Every question that starts from a country therefore needs one or two patterns less in GRASP (Q1--Q5, Q8). For instance, Q8 needs the independence date from \texttt{Politics} and the GDP and unemployment rate from \texttt{Economy}. GRASP reads all three from the country, while the baseline needs one node per table:
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
 # GRASP
 ?c ex:independenceDate ?d ; ex:gdpMillionUSD ?gdp ; ex:unemploymentPercent ?u .
@@ -647,7 +647,7 @@ In \(D\), \texttt{Economy}, \texttt{Population}, and \texttt{Politics} are in a 
 On QLever, the additional joins cost little: GRASP is at most 1.3 times faster on these questions, and on Q1 and Q2, the baseline is even slightly faster.
 
 \subparagraph{Borders between countries.}
-The baseline materializes the symmetric relation \texttt{mond:borders} between two countries, in addition to the \texttt{Border} node that holds the border length. GRASP keeps only the \texttt{Border} node, which names the two countries as \texttt{ex:country1} and \texttt{ex:country2}. To reach a neighbor in GRASP, a query has to go through the node, try both sides, and remove the start country. This is the largest difference in the set: The baseline is 5.3 times faster on Q10, and 4.3 times faster on Q11, where the path is repeated in a transitive closure:
+The baseline materializes the symmetric relation \texttt{mond:borders} between two countries, in addition to the \texttt{Border} node that holds the border length. GRASP keeps only the \texttt{Border} node, which names the two countries as \texttt{ex:country1} and \texttt{ex:country2}. To reach a neighbor in GRASP, a query has to go through the node, try both sides, and remove the start country. This is the largest difference in the set: the baseline is 5.3 times faster on Q10, and 4.3 times faster on Q11, where the path is repeated in a transitive closure:
 \begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
 # Baseline
 <.../country/F> mond:borders+ ?x .
@@ -657,24 +657,19 @@ The baseline materializes the symmetric relation \texttt{mond:borders} between t
 Where the question is about the border itself, as in Q9 (border length per country), the effect is reversed: GRASP reaches the borders of a country directly through \texttt{ex:hasBorder} and is 1.4 times faster.
 
 \subparagraph{Merged feature locations.}
-In \(D\), a river is linked to provinces through three tables: \texttt{geo\_Source}, \texttt{geo\_Estuary}, and \texttt{geo\_River}. The baseline keeps the three roles as separate predicates. GRASP reads all \texttt{geo\_*} tables in one query through a variable predicate, so all three become the same \texttt{ex:province} edge, and GRASP adds the country of each province directly to the feature. This gives GRASP a one-hop path from a feature to its countries (Q4, Q5), but it removes the distinction between source and mouth. Q13 therefore has no equivalent query on GRASP:
-\begin{lstlisting}[language=SPARQL, basicstyle=\ttfamily\scriptsize, columns=fixed]
-# Baseline
-?r mond:sourceInProvince ?ps ; mond:estuaryInProvince ?pe .
-?ps mond:country ?cs . ?pe mond:country ?ce . FILTER(?cs != ?ce)
-\end{lstlisting}
-The information is present in \(D\), but not in the model, and a user of the GRASP graph cannot recover it.
+In \(D\), a river is linked to provinces through three tables: \texttt{geo\_Source}, \texttt{geo\_Estuary}, and \texttt{geo\_River}. The baseline keeps the three roles as separate predicates. GRASP reads all \texttt{geo\_*} tables in one query through a variable predicate, so all three become the same \texttt{ex:province} edge, and GRASP adds the country of each province directly to the feature. This gives GRASP a one-hop path from a feature to its countries (Q4, Q5), but it removes the distinction between source and mouth. 
+% On the GRASP graph, a user cannot ask where a river rises or where it flows into the sea, although the information is present in \(D\).
 
 \subparagraph{Years and observation classes.}
 As on IMDb, the baseline types years as \texttt{xsd:gYear}, so the yearly increase in Q7 needs \texttt{xsd:integer(STR(?y))} on both years. GRASP uses \texttt{xsd:integer} and needs no cast. The baseline is still faster on Q7 (21\,ms against 28\,ms), because it has a separate class for the population observations of countries, while GRASP uses one class for countries, provinces, and cities and has to select the country observations through their subject.
 
-\subparagraph{Shared nodes.}
-GRASP links each religion share to one shared \texttt{ex:Religion} node, which avoids the major issue of the baseline and is the better model. When grouping by the name of the religion (Q12), however, it costs one hop more than the literal of the baseline. For the landlocked countries (Q6), both graphs need the same number of patterns.
+% \subparagraph{Shared nodes.}
+% GRASP links each religion share to one shared \texttt{ex:Religion} node, which avoids the major issue of the baseline and is the better model. For the landlocked countries (Q6), both graphs need the same number of patterns.
 
-Overall, the folded statistics and shortcuts make the GRASP graph simpler to query whenever a question starts from a country, and the materialized neighbor relation makes the baseline graph faster for questions about the network of countries. The one question that only the baseline can answer shows that a more compact model can also lose a distinction that a user needs. Together with the close judge scores, this shows that on Mondial, both approaches produce graphs of comparable usability, with different trade-offs.
+Overall, the GRASP graph is simpler to query whenever a question starts from a country, since the statistics are properties of the country and memberships have direct shortcuts. The baseline graph, on the other hand,is faster for questions about the network of countries. It should also be noted that the merged feature locations indicate that a more compact model may also lose a distinction that a user might need. Considering the close judge scores as well, this shows that on Mondial, both approaches produce graphs of comparable usability, with different trade-offs.
 
 \paragraph{MusicBrainz}\label{sec:results-musicbrainz}
-For MusicBrainz, the baseline produced no output, so we compare the GRASP output KG with the generic KG \(G_D\) itself, which is what a user would have to query without semantic modeling. GRASP models artists, releases, recordings, works, labels, areas, and their relationships, with artist credits as separate nodes. The judge scores it 6.7, with four major issues: editor collections are not modeled, the IPI and ISNI identifiers of labels never reach the graph, and the direct relationship predicates are named after the name of the link type, which is reused for different meanings and is emitted in the wrong direction for many link types. The differences to \(G_D\) that matter for querying are listed in Table~\ref{tab:mb-diff}.
+For MusicBrainz, the baseline produced no output, so we compare the GRASP output KG with the generic KG \(G_D\) itself. GRASP models artists, releases, recordings, works, labels, areas, and their relationships, with artist credits as separate nodes. The judge scores it 6.7, with four major issues: editor collections are not modeled, the IPI and ISNI identifiers of labels never reach the graph, and the direct relationship predicates are named after the name of the link type, which is reused for different meanings and is emitted in the wrong direction for many link types. The key differences to \(G_D\) are listed in Table~\ref{tab:mb-diff}.
 
 \begin{table}[!htbp]
   \centering

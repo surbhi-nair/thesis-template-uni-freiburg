@@ -66,22 +66,22 @@
 \contentsline {subsubsection}{\numberline {5.3.3}Qualitative Analysis}{45}{subsubsection.5.3.3}%
 \contentsline {paragraph}{Examples of major issues on the BIRD databases:}{45}{section*.54}%
 \contentsline {paragraph}{IMDb}{46}{section*.55}%
-\contentsline {subparagraph}{Folding the ratings into the title.}{47}{section*.58}%
+\contentsline {subparagraph}{Ratings on the title.}{48}{section*.58}%
 \contentsline {subparagraph}{Years as integers.}{48}{section*.59}%
-\contentsline {subparagraph}{Code lists as nodes.}{48}{section*.60}%
+\contentsline {subparagraph}{Catgeorical values as nodes.}{48}{section*.60}%
 \contentsline {subparagraph}{Equal cases.}{49}{section*.61}%
 \contentsline {paragraph}{Mondial}{49}{section*.62}%
-\contentsline {subparagraph}{Folding the country statistics.}{50}{section*.65}%
-\contentsline {subparagraph}{Borders between countries.}{50}{section*.66}%
-\contentsline {subparagraph}{Merged feature locations.}{52}{section*.67}%
-\contentsline {subparagraph}{Years and observation classes.}{52}{section*.68}%
+\contentsline {subparagraph}{Country statistics as properties of the country.}{50}{section*.65}%
+\contentsline {subparagraph}{Borders between countries.}{51}{section*.66}%
+\contentsline {subparagraph}{Merged feature locations.}{51}{section*.67}%
+\contentsline {subparagraph}{Years and observation classes.}{51}{section*.68}%
 \contentsline {subparagraph}{Shared nodes.}{52}{section*.69}%
-\contentsline {paragraph}{MusicBrainz}{53}{section*.70}%
-\contentsline {subparagraph}{Direct relationship edges.}{54}{section*.73}%
-\contentsline {subparagraph}{Direction of the relationship edges.}{55}{section*.74}%
+\contentsline {paragraph}{MusicBrainz}{52}{section*.70}%
+\contentsline {subparagraph}{Direct relationship edges.}{53}{section*.73}%
+\contentsline {subparagraph}{Direction of the relationship edges.}{53}{section*.74}%
 \contentsline {subparagraph}{Shared predicates.}{55}{section*.75}%
 \contentsline {subparagraph}{Dates as one literal.}{55}{section*.76}%
-\contentsline {subparagraph}{Equal cases.}{56}{section*.77}%
+\contentsline {subparagraph}{Equal cases.}{55}{section*.77}%
 \contentsline {section}{\numberline {6}Conclusion}{57}{section.6}%
 \contentsline {paragraph}{RQ1:}{57}{section*.78}%
 \contentsline {paragraph}{RQ2:}{57}{section*.79}%
