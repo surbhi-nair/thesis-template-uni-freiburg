@@ -1,35 +1,27 @@
-\section{Conclusion}\label{sec:conclusion}
+\section{Conclusion and Future Work}\label{sec:conclusion}
 
-In this thesis, we investigated to what extent an LLM agent can automate the semantic modeling of structured data by generating SPARQL CONSTRUCT queries. Our approach converts a dataset into a generic KG \(G_D\) and lets a GRASP generation agent remodel it, testing every query on \(G_D\), with an independent review agent checking the result. We compared it with the general-purpose coding agent OpenCode on eight datasets with 3 to 239 tables.
+In this thesis, we investigated to what extent an LLM agent can automate the semantic modeling of structured data by generating SPARQL CONSTRUCT queries. Our approach converts a dataset into a generic KG \(G_D\) and lets a GRASP generation agent remodel it, testing every query on \(G_D\), with an independent review agent checking the result. We compared it with the general-purpose coding agent OpenCode on eight datasets, with schemas from 3 to 239 tables.
 
-\paragraph{RQ1:}
-For schemas of up to 47 tables, the agent produces good semantic models. All thirteen GRASP query sets executed on QLever without changes, and the judge scores of all GRASP runs on these datasets range from 7.5 to 9.2 out of 10, with at most two major issues per run.
+\paragraph{RQ1 -- Can LLM agents produce a good semantic model with CONSTRUCT queries?}
+For datasets of up to a few dozen tables, both agents, our approach and the baseline, produce a reasonable semantic model by writing CONSTRUCT queries over the generic KG. Both identify the main things of a domain, such as titles and persons or countries and rivers, turn them into entities, link them to each other, and carry the data over almost completely. Producing such a model reliably is harder: every query set of our approach ran without changes, while half of the baseline's query sets did not run, although the baseline reported them as tested. On the largest dataset, MusicBrainz, the baseline produced no queries at all, and the model of our approach is usable, but contains errors that a person would have to correct.
 
-\paragraph{RQ2:}
-Without competency questions, our approach scores at least as high as the baseline on all seven datasets where both produced a result, and higher on six. On the BIRD databases, the mean is 8.5 against 7.6, with 3 major issues against 16, and the gains lie in relationships, entity modeling, vocabulary, and self description. Six of the twelve baseline query sets did not run on QLever, although the baseline reported them as tested. On IMDb, the GRASP graph is also simpler and faster to query on every analytical question. On Mondial, the two graphs trade shortcuts, and neither is better on all questions.
+\paragraph{RQ2 -- Does GRASP produce a better semantic model than the baseline?}
+On most datasets, our approach produces the better semantic model. The difference lies less in how much of the data is carried over than in how it is modeled: GRASP more often creates appropriate real-world entities and links between them, uses clearer vocabulary, and types and labels its entities more consistently, where the baseline tends to copy the structure of the tables. It also has far fewer major issues. However, this is subjective and cannot be considered uniform. On Mondial, each graph is easier to query for a different kind of question, and on superhero, the smallest database, both approaches reach the same quality.
 
-\paragraph{RQ3:}
-Competency questions raise the baseline mean from 7.6 to 8.1, mainly through better coverage and typing, but lower the GRASP mean from 8.5 to 8.3, because the agent narrows its model towards the questions. They help an agent that otherwise misses data, and can harm one that already explores it thoroughly.
+\paragraph{RQ3 -- Do competency questions help?}
+The effect of competency questions depends on the agent. They help the baseline, by pointing it to parts of the data that it would otherwise miss. For GRASP, the questions slightly narrow the model towards what they ask possibly because of the iterative review cycles. We could see that even without competency questions, GRASP produces a good model, and the questions do not necessarily improve it significantly.
 
-\paragraph{RQ4:}
-The score does not follow the number of tables: Mondial (47 tables) scores 8.9, card\_games (6 tables) lowest among the BIRD databases. Datasets are hard when their domain is far from their schema. Only MusicBrainz, with 239 tables, drops to 6.7. The characteristic failure modes are:
-\begin{itemize}[leftmargin=*, itemsep=1pt]
-  \item relationship predicates that are reused for different meanings or point in the wrong direction;
-  \item parts of a large schema that are never read;
-  \item datatypes that force casts or silently drop values, such as \texttt{xsd:gYear} years and dates built as strings;
-  \item predicates shared across entity types, and merged roles that remove distinctions a user needs.
+\paragraph{RQ4 -- How does the schema affect the quality, and what goes wrong?}
+From our experiments, we found that up to about fifty tables, the size of the schema is not necessarily what makes a dataset hard. It also matters how closely its tables match the concepts of the domain. A very large schema, as in MusicBrainz, does lower the quality, because one consistent model has to cover all of it. The typical errors are relationships that are named or directed wrongly, values that are lost through an unsuitable datatype, parts of the schema that are left out, and predicates that are shared across different kinds of entities. 
+
+% All of them produce well-formed triples and only become visible when the graph is queried.
+
+Overall, the comparison is a trade-off rather than a clear ranking. Semantic modeling has no single correct answer: a model that is compact for one set of questions can lose a distinction that another set needs, and how a dataset should be modeled ultimately depends on how its users want to query it. Our evaluation, through an LLM judge and through analytical questions that we chose, is itself one view on what a good model is. The results should therefore be read as a comparison of how the two approaches currently perform on these datasets, with one LLM and one run per configuration, and not as an absolute measure of quality. Within this frame, an agent that explores and tests against the data reliably produces a good first model, and since this model is a set of CONSTRUCT queries, an expert can inspect it and adapt it to the intended use.
+
+We think that the following directions would improve the approach and its evaluation:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Review on the output.} The review agent currently checks the submitted queries against the generic KG. Letting it also query the materialized output, for example with the competency questions or with simple checks such as the number of entities per class, would expose errors that are not visible in the queries themselves, such as relationship edges in the wrong direction or values that a datatype silently drops.
+  \item \textbf{Competency questions as tests.} Since competency questions narrow the model of the generation agent, they could be given only to the review agent, which then checks whether the output can answer them. This could keep their benefit for coverage without letting them define the scope of the model.
+  \item \textbf{Scale.} For schemas with hundreds of tables, such as MusicBrainz, the agent could model the schema in parts, for example one group of related tables at a time, with a final step that checks the parts for consistent IRIs and predicates. This would reduce the amount of schema that one agent has to keep consistent at once. However, in this case, keeping the batches internally consistent with each other would be a challenge.
+  \item \textbf{Broader evaluation.} Each configuration was run and judged once, with a single LLM. Repeated runs, further LLMs as generators and as judges, or an expert evaluation of the output would give a more robust picture of the quality and the variance of the results.
 \end{itemize}
-These errors produce well-formed triples and become visible only when the output is queried.
-
-\paragraph{Limitations:}
-Each configuration was run and judged once, and the judge is the same LLM as the generators, DeepSeek~V4.1~Flash, which is the only model we used. The agents only see samples of the data. The analytical questions were written by us, and the held-out competency questions have not yet been used to measure answerability.
-
-\paragraph{Future work:}
-\begin{itemize}[leftmargin=*, itemsep=1pt]
-  \item \textbf{Review on the output.} Letting the reviewer query the materialized output, for example with the competency questions, would expose wrong directions and dropped values that the queries do not show.
-  \item \textbf{Questions as tests.} Giving competency questions only to the reviewer could keep their benefit without narrowing the model.
-  \item \textbf{Large schemas.} Modeling large schemas in parts, with a consistency check across parts.
-  \item \textbf{Broader evaluation.} Repeated runs, further LLMs, and answerability on the held-out questions.
-\end{itemize}
-
-Overall, an LLM agent that explores and tests against the data produces good semantic models for schemas of up to a few dozen tables, and better ones than a general-purpose agent. Since its output is a set of CONSTRUCT queries, a human expert can find and correct the errors that remain.

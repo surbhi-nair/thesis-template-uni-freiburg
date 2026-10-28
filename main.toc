@@ -75,25 +75,22 @@
 \contentsline {subparagraph}{Borders between countries.}{51}{section*.66}%
 \contentsline {subparagraph}{Merged feature locations.}{51}{section*.67}%
 \contentsline {subparagraph}{Years and observation classes.}{51}{section*.68}%
-\contentsline {subparagraph}{Shared nodes.}{52}{section*.69}%
-\contentsline {paragraph}{MusicBrainz}{52}{section*.70}%
-\contentsline {subparagraph}{Direct relationship edges.}{53}{section*.73}%
-\contentsline {subparagraph}{Direction of the relationship edges.}{53}{section*.74}%
-\contentsline {subparagraph}{Shared predicates.}{55}{section*.75}%
-\contentsline {subparagraph}{Dates as one literal.}{55}{section*.76}%
+\contentsline {paragraph}{MusicBrainz}{52}{section*.69}%
+\contentsline {subparagraph}{Direct relationship edges.}{53}{section*.72}%
+\contentsline {subparagraph}{Direction of the relationship edges.}{54}{section*.73}%
+\contentsline {subparagraph}{Shared predicates.}{54}{section*.74}%
+\contentsline {subparagraph}{Dates as one literal.}{54}{section*.75}%
 \contentsline {subparagraph}{Equal cases.}{55}{section*.77}%
-\contentsline {section}{\numberline {6}Conclusion}{57}{section.6}%
-\contentsline {paragraph}{RQ1:}{57}{section*.78}%
-\contentsline {paragraph}{RQ2:}{57}{section*.79}%
-\contentsline {paragraph}{RQ3:}{57}{section*.80}%
-\contentsline {paragraph}{RQ4:}{57}{section*.81}%
-\contentsline {paragraph}{Limitations:}{58}{section*.82}%
-\contentsline {paragraph}{Future work:}{58}{section*.83}%
-\contentsline {section}{List of Figures}{I}{section*.84}%
-\contentsline {section}{List of Tables}{II}{section*.85}%
-\contentsline {section}{Bibliography}{III}{section*.86}%
-\contentsline {section}{Appendix}{VIII}{section*.86}%
-\contentsline {paragraph}{Generation agent:}{VIII}{section*.88}%
-\contentsline {paragraph}{Review agent:}{X}{section*.89}%
-\contentsline {paragraph}{Baseline:}{XII}{section*.90}%
-\contentsline {paragraph}{LLM judge:}{XII}{section*.91}%
+\contentsline {section}{\numberline {6}Conclusion and Future Work}{56}{section.6}%
+\contentsline {paragraph}{RQ1 -- Can LLM agents produce a good semantic model with CONSTRUCT queries?}{56}{section*.78}%
+\contentsline {paragraph}{RQ2 -- Does GRASP produce a better semantic model than the baseline?}{56}{section*.79}%
+\contentsline {paragraph}{RQ3 -- Do competency questions help?}{56}{section*.80}%
+\contentsline {paragraph}{RQ4 -- How does the schema affect the quality, and what goes wrong?}{56}{section*.81}%
+\contentsline {section}{List of Figures}{I}{section*.82}%
+\contentsline {section}{List of Tables}{II}{section*.83}%
+\contentsline {section}{Bibliography}{III}{section*.84}%
+\contentsline {section}{Appendix}{VIII}{section*.84}%
+\contentsline {paragraph}{Generation agent:}{VIII}{section*.86}%
+\contentsline {paragraph}{Review agent:}{X}{section*.87}%
+\contentsline {paragraph}{Baseline:}{XII}{section*.88}%
+\contentsline {paragraph}{LLM judge:}{XII}{section*.89}%
